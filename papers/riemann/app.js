@@ -45,6 +45,60 @@
       formula:'\\hat T=(\\hat R_o,\\hat t)\\in SE(3),\\qquad \\text{articulated task: }\\hat d\\in\\mathbb R^3',
       input:'t̂, R̂ₒ; articulated task +d̂',output:'Robot target action',ref:'§3.1 p.3; §4.2 p.6; Appendix A.5.1 p.15',active:8}
   ];
+  const visualStages=[
+    {lead:'Six RGB-D views describe the same workspace. Fusion produces one cloud containing the target, robot, and uneven table.',
+      items:[['cameras','Six RGB-D views','Color and depth from around the table'],['scene','Shared workspace','The raised table sector is 0.10 m higher'],['cloud','One point cloud P','Each dot has position and RGB']]},
+    {lead:'The network reads color as three scalar values at each point. 3D coordinates define where points are and which points are neighbors.',
+      items:[['cloud','Point xᵢ','A location in 3D space'],['rgb','RGB values cᵢ','Three numbers attached to xᵢ'],['scalars','Three type-0 channels','R, G, and B stay scalar under rotation']]},
+    {lead:'The saliency network compares nearby points through four local layers and assigns one score to every input point.',
+      items:[['neighbors','Local point neighbors','Connections use 3D distance'],['network','φ: four layers','SE(3)-Transformer message passing'],['scores','Saliency scores','Brighter dots matter more for the coarse position']]},
+    {lead:'High saliency points pull the weighted center toward the task. A radius-r₁ sphere around that center retains the local ROI.',
+      items:[['scores','Scores over P','Softmax converts scores to weights'],['roi','Coarse center + r₁','Points inside the sphere are selected'],['crop','ROI cloud','Later networks see only these points']]},
+    {lead:'The same ROI goes to two parallel networks: one predicts a scalar grasp-position score per point; the other predicts three vectors per point.',
+      items:[['crop','Shared ROI','Local points and RGB'],['scalar','ψ₁: position field','One type-0 value per point'],['vector','ψ₂: orientation fields','Three type-1 arrows per point']]},
+    {lead:'The position field becomes Softmax weights. Every ROI point contributes its coordinate; their weighted sum gives the predicted target position.',
+      items:[['scalar','Pointwise logits','A value from ψ₁ at every ROI point'],['weights','Weighted coordinates','Larger αᵢ contributes more'],['target','Predicted t̂','A 3D point near the grasp site']]},
+    {lead:'Near t̂, the r₂ neighborhood selects reliable orientation predictions. Average each of the three vector fields separately.',
+      items:[['local','r₂ around t̂','Keep nearby ROI points'],['vector','Vectors at each point','Three type-1 fields from ψ₂'],['pooled','Mean vectors v₁,v₂,v₃','Candidate orientation axes']]},
+    {lead:'The three averaged vectors may be skewed. IMGS makes them orthonormal so they form a valid rotation matrix.',
+      items:[['raw','Before IMGS','Three candidate axes need not be perpendicular'],['orthogonalize','Two IMGS rounds','Correct the axes and normalize them'],['rotation','Rotation R̂ₒ','Perpendicular, unit-length axes']]},
+    {lead:'Position and orientation specify an end-effector target pose. A separate planner executes the reach and manipulation.',
+      items:[['pose','Target pose T̂','Translation t̂ plus rotation R̂ₒ'],['planner','Motion planner','Computes a collision-aware route'],['action','Robot action','Reach, grasp, move, or turn']]}
+  ];
+  const visualDots=[[21,49],[29,35],[35,58],[43,43],[50,27],[54,55],[63,40],[70,61],[77,33],[83,51],[91,27],[100,45],[108,58],[118,37]];
+  const dot=(x,y,r,color)=>'<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+color+'"/>';
+  const stroke=(x1,y1,x2,y2,color,width=2)=>'<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+color+'" stroke-width="'+width+'" stroke-linecap="round"/>';
+  function visualGlyph(kind){
+    const blue='#315d91',green='#007e70',red='#b64e45',gray='#a8b6af',amber='#a77924';
+    const cloud=visualDots.map(([x,y],i)=>dot(x,y,3.2,i>3&&i<10?blue:gray)).join('');
+    const axes=stroke(69,58,104,48,red,3)+stroke(69,58,64,20,green,3)+stroke(69,58,42,69,blue,3)+dot(69,58,4,'#17262c');
+    let body='';
+    if(kind==='cameras')body='<path d="M45 62 Q70 72 95 62" fill="none" stroke="#788b85" stroke-width="5"/>'+dot(70,49,8,blue)+[[17,35],[34,15],[62,7],[91,7],[117,16],[124,38]].map(([x,y])=>'<rect x="'+x+'" y="'+y+'" width="10" height="8" rx="1" fill="#384851"/>'+stroke(x+5,y+8,70,49,green,1)).join('');
+    else if(kind==='scene')body='<ellipse cx="70" cy="65" rx="58" ry="12" fill="#788b85"/><path d="M39 59 v-22 h15 v22 M81 59 v-31 h8 v31" fill="none" stroke="#384851" stroke-width="7"/><rect x="28" y="33" width="19" height="22" rx="3" fill="'+blue+'"/><rect x="96" y="49" width="13" height="12" fill="#d97052"/>';
+    else if(kind==='cloud'||kind==='crop')body=cloud+(kind==='crop'?'<circle cx="70" cy="44" r="37" fill="none" stroke="'+green+'" stroke-width="2"/>':'');
+    else if(kind==='rgb')body=dot(48,42,7,blue)+['#c34d43','#2e9e70','#315d91'].map((c,i)=>'<rect x="'+(75+i*14)+'" y="30" width="10" height="25" rx="2" fill="'+c+'"/>').join('')+stroke(57,42,71,42,gray);
+    else if(kind==='scalars')body=['R','G','B'].map((v,i)=>'<circle cx="'+(39+i*31)+'" cy="41" r="13" fill="'+[red,green,blue][i]+'"/><text x="'+(39+i*31)+'" y="45" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">'+v+'</text>').join('');
+    else if(kind==='neighbors')body=cloud+'<circle cx="70" cy="45" r="25" fill="none" stroke="'+green+'" stroke-dasharray="4 3" stroke-width="2"/>'+stroke(70,45,54,55,green)+stroke(70,45,83,51,green)+stroke(70,45,63,40,green)+dot(70,45,5,red);
+    else if(kind==='network')body=[20,48,76,104].map((x,i)=>'<rect x="'+x+'" y="29" width="18" height="30" rx="2" fill="'+(i===3?green:'#c9e4da')+'" stroke="'+green+'"/><text x="'+(x+9)+'" y="48" text-anchor="middle" fill="'+(i===3?'#fff':green)+'" font-size="11">'+(i+1)+'</text>').join('')+stroke(38,44,48,44,green)+stroke(66,44,76,44,green)+stroke(94,44,104,44,green);
+    else if(kind==='scores')body=visualDots.map(([x,y],i)=>dot(x,y,i>4&&i<10?5:2.5,i>4&&i<10?red:gray)).join('');
+    else if(kind==='roi'||kind==='local')body=cloud+'<circle cx="69" cy="45" r="'+(kind==='local'?21:36)+'" fill="'+green+'" fill-opacity=".09" stroke="'+green+'" stroke-width="2"/>'+dot(69,45,5,red);
+    else if(kind==='scalar')body=visualDots.slice(2,12).map(([x,y],i)=>dot(x,y,i>2&&i<7?6:3,i>2&&i<7?red:gray)).join('')+'<text x="105" y="18" fill="'+red+'" font-size="13">fₜ</text>';
+    else if(kind==='vector')body=[[40,58],[70,49],[101,59]].map(([x,y])=>dot(x,y,3,blue)+stroke(x,y,x+10,y-3,red,2)+stroke(x,y,x+2,y-13,green,2)+stroke(x,y,x-9,y-7,blue,2)).join('')+'<text x="90" y="19" fill="'+green+'" font-size="12">3 × f₁</text>';
+    else if(kind==='weights')body=visualDots.slice(2,12).map(([x,y],i)=>dot(x,y,i>2&&i<7?5:2.5,i>2&&i<7?red:gray)+stroke(x,y,71,46,amber,1)).join('')+dot(71,46,5,green);
+    else if(kind==='target')body='<path d="M43 60 V27 H77 V60 M77 33 Q108 22 106 46 Q102 66 77 55" fill="none" stroke="'+blue+'" stroke-width="5"/>'+dot(106,44,5,red)+stroke(97,44,115,44,red)+stroke(106,35,106,53,red);
+    else if(kind==='pooled'||kind==='raw'||kind==='rotation')body=kind==='raw'?stroke(69,58,108,46,amber,3)+stroke(69,58,78,19,amber,3)+stroke(69,58,37,45,amber,3)+dot(69,58,4,'#17262c'):axes+(kind==='rotation'?'<path d="M69 48 h10 v10" fill="none" stroke="#17262c" stroke-width="1.5"/>':'');
+    else if(kind==='orthogonalize')body=stroke(28,59,53,42,amber,3)+stroke(28,59,39,28,amber,3)+stroke(28,59,77,59,amber,3)+'<text x="70" y="51" fill="'+green+'" font-size="17" font-weight="700">→</text>'+stroke(103,59,124,59,red,3)+stroke(103,59,103,31,green,3);
+    else if(kind==='pose')body=axes+'<path d="M32 70 H115" stroke="'+gray+'" stroke-width="2" stroke-dasharray="4 4"/><text x="102" y="30" fill="'+red+'" font-size="12">t̂</text>';
+    else if(kind==='planner')body='<rect x="17" y="59" width="20" height="10" fill="#384851"/>'+stroke(27,59,47,32,'#c7d2cd',9)+stroke(47,32,75,41,'#c7d2cd',8)+stroke(75,41,104,24,'#c7d2cd',7)+'<path d="M106 26 Q121 38 107 57" fill="none" stroke="'+green+'" stroke-width="2" stroke-dasharray="4 3"/>';
+    else if(kind==='action')body='<path d="M33 60 V34 H53 V60 M53 40 Q77 36 72 52 Q68 62 53 56" fill="none" stroke="'+blue+'" stroke-width="4"/><path d="M64 29 Q86 16 107 37" fill="none" stroke="'+green+'" stroke-width="2" stroke-dasharray="4 3"/><path d="M109 60 V22 M109 33 h19" stroke="'+amber+'" stroke-width="5" fill="none"/>';
+    return '<svg viewBox="0 0 140 86" role="img" aria-hidden="true">'+body+'</svg>';
+  }
+  function renderVisual(){
+    const data=visualStages[step];
+    const root=el('stageVisual');
+    root.innerHTML='<div class="visual-head"><span class="eyebrow">What changes in this step</span><p>'+data.lead+'</p></div><div class="visual-flow">'+data.items.map(([kind,title,detail],i)=>'<div class="visual-item">'+visualGlyph(kind)+'<div><strong>'+title+'</strong><span>'+detail+'</span></div></div>'+(i<2?'<div class="visual-arrow" aria-hidden="true">→</div>':'')).join('')+'</div>';
+    root.hidden=false;
+  }
   const trainStages=[
     {short:'Demos',title:'Input demonstration clouds and target poses',desc:'Each iteration samples a batch of demonstrations. A demonstration supplies scene cloud P and end-effector target T=(R,t), which supervise the three networks. Real and simulated clouds are transformed into the end-effector coordinate frame.',formula:'\\mathcal D=\\{(P_i,T_i)\\}_{i=1}^{M},\\quad T_i=(R_i,t_i)',ref:'§3.1 p.3; Algorithm 1 p.12; Appendix A.5.2, A.6.1',nodes:['sample']},
     {short:'φ forward',title:'Four-layer full-scene φ forward pass',desc:'Three RGB type-0 input fields and the coordinate graph enter φ. Its four local SE(3)-Transformer layers produce pointwise saliency scalars; Softmax yields a coarse position. The diagram shows four backbone blocks because the paper does not specify per-layer tensor widths.',formula:'f_s=\\phi(P),\\qquad \\tilde t=\\sum_{x_i\\in P}\\operatorname{softmax}(f_s)_i x_i',ref:'§§4.1–4.2 pp.4–5; Table 3 p.14',nodes:['sample','phi']},
@@ -73,7 +127,7 @@
   function showPoint(p){
     const out=el('pointReadout');
     if(!p){out.textContent='Click a point in the 3D cloud to inspect its position, ROI membership, and illustrative weight.';return}
-    const kind={target:'target',scene:'scene',distractor:'distractor'}[p.kind];
+    const kind={target:'target',scene:'scene',distractor:'distractor block'}[p.kind];
     out.innerHTML='<b>Point #'+p.id+' · '+kind+'</b><br>Position ('+p.x.toFixed(3)+', '+p.y.toFixed(3)+', '+p.z.toFixed(3)+') m<br>Illustrative saliency '+p.score.toFixed(2)+' · ROI '+(p.roi?'inside':'outside')+' · r₂ '+(p.pool?'inside':'outside')+'<br>Illustrative position weight '+p.weight.toFixed(5)+(p.radius?'<br>Within '+p.radius.toFixed(2)+' m message radius: '+p.neighbors+' neighbors · first type-1 axis ('+p.axis.map(x=>x.toFixed(2)).join(', ')+')':'');
   }
   function showAction(progress,label){
@@ -110,6 +164,7 @@
     typeset(el('detail'));
     const micro=['Cloud P','RGB/type-0','φ','B_ROI','ψ₁ / ψ₂','t̂','R̂','IMGS','T̂'];
     el('microFlow').innerHTML=micro.map((x,i)=>'<span'+(i===step?' class="active"':'')+'>'+x+'</span>').join('');
+    renderVisual();
     if(inferenceScene)inferenceScene.setStep(step);
     el('actionBar').hidden=step!==8;
   }

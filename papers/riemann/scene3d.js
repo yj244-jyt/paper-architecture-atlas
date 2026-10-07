@@ -62,20 +62,46 @@ window.Riemann3D = function Riemann3D(container, options) {
   scene.add(key);
   const floor = mesh(new T.PlaneGeometry(8,8),new T.MeshStandardMaterial({color:0xd8e3dc,roughness:1}),0,0,0);
   floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;floor.castShadow=false;
-  // The paper describes a radius-0.75 m uneven ring table.
-  const heights=[0.72,0.82,0.72];
-  const angles=[Math.PI,Math.PI/2,Math.PI/2];
-  let begin=0;
-  heights.forEach((h,i)=>{
-    const top=mesh(new T.CylinderGeometry(.75,.75,.08,48,1,false,begin,angles[i]),mats.table,0,h-.04,0);
-    top.receiveShadow=true;begin+=angles[i];
-  });
-  cylinder(.075,.095,.66,mats.dark,0,.33,0);
+  // The paper specifies three sectors and a 0.10 m height difference.
+  const tableLow=.77, tableHigh=.87, tableRadius=.75;
+  const tableBottom=tableLow-.08,tableVertices=[],tableColors=[],tableSegments=96;
+  const tableShades={
+    low:new T.Color(0x788b85),high:new T.Color(0x97aaa0),
+    lowSide:new T.Color(0x687b74),highSide:new T.Color(0x7e9389)
+  };
+  const tablePoint=(a,y,r=tableRadius)=>[Math.sin(a)*r,y,Math.cos(a)*r];
+  const triangle=(a,b,c,shade)=>{
+    tableVertices.push(...a,...b,...c);
+    for(let j=0;j<3;j++)tableColors.push(shade.r,shade.g,shade.b);
+  };
+  const quad=(a,b,c,d,shade)=>{triangle(a,b,c,shade);triangle(a,c,d,shade)};
+  for(let i=0;i<tableSegments;i++){
+    const a=i*2*Math.PI/tableSegments,b=(i+1)*2*Math.PI/tableSegments;
+    const height=i<tableSegments/4?tableHigh:tableLow;
+    const topA=tablePoint(a,height),topB=tablePoint(b,height);
+    triangle([0,height,0],topA,topB,height===tableHigh?tableShades.high:tableShades.low);
+    quad(topA,tablePoint(a,tableBottom),tablePoint(b,tableBottom),topB,height===tableHigh?tableShades.highSide:tableShades.lowSide);
+    triangle([0,tableBottom,0],tablePoint(b,tableBottom),tablePoint(a,tableBottom),tableShades.lowSide);
+  }
+  for(const a of [0,Math.PI/2]){
+    quad([0,tableHigh,0],tablePoint(a,tableHigh),tablePoint(a,tableLow),[0,tableLow,0],tableShades.highSide);
+  }
+  const tableGeometry=new T.BufferGeometry();
+  tableGeometry.setAttribute('position',new T.Float32BufferAttribute(tableVertices,3));
+  tableGeometry.setAttribute('color',new T.Float32BufferAttribute(tableColors,3));
+  tableGeometry.computeVertexNormals();
+  mats.table.color.setHex(0xffffff);
+  mats.table.vertexColors=true;
+  mats.table.side=T.DoubleSide;
+  const tabletop=mesh(tableGeometry,mats.table,0,0,0);
+  tabletop.castShadow=false;
+  cylinder(.075,.095,tableLow-.08,mats.dark,0,(tableLow-.08)/2,0);
   cylinder(.27,.27,.035,mats.dark,0,.03,0);
   const grid=new T.GridHelper(3,16,0xbccac4,0xcbd8d1);grid.position.y=.008;grid.material.transparent=true;grid.material.opacity=.34;scene.add(grid);
   function makeRobot(){
     const base=[0,.79,-.48], shoulder=[0,.94,-.48], elbow=[-.09,1.14,-.39], fore=[-.04,1.32,-.31], wrist=[-.12,1.34,-.17], tip=[-.18,1.27,-.06];
     cylinder(.12,.14,.10,mats.dark,base[0],base[1],base[2]);
+    robotSegments.push(segment([0,.83,-.48],[0,.94,-.48],.069,mats.pale));
     cylinder(.07,.07,.08,mats.pale,shoulder[0],shoulder[1],shoulder[2]);
     for(const [a,b,r] of [[shoulder,elbow,.052],[elbow,fore,.047],[fore,wrist,.041],[wrist,tip,.032]])robotSegments.push(segment(a,b,r,mats.pale));
     for(const p of [elbow,fore,wrist])ball(.053,mats.dark,...p);
@@ -176,16 +202,14 @@ window.Riemann3D = function Riemann3D(container, options) {
       const a=seed(i+5500)*Math.PI*2,r=Math.sqrt(seed(i+6500))*.73;
       const x=Math.cos(a)*r,z=Math.sin(a)*r;
       if(Math.hypot(x+.4,z-.1)<.16||Math.hypot(x-.35,z)<.15)continue;
-      sample('scene',x,.764,z,0xa8b6af,-3);
+      sample('scene',x,(x>0&&z>0?tableHigh:tableLow)+.004,z,0xa8b6af,-3);
     }
     for(let i=0;i<160;i++){
-      const a=seed(i+7500)*Math.PI*2,r=Math.sqrt(seed(i+8500))*.04;
-      sample('distractor',-.12+Math.cos(a)*r,.78+seed(i+9500)*.12,.37+Math.sin(a)*r,0xd97052,-1);
+      sample('distractor',-.12+(seed(i+7500)-.5)*.09,tableLow+seed(i+9500)*.085,.37+(seed(i+8500)-.5)*.08,0xd97052,-1);
     }
   }
   const distractorSolid=new T.Group();scene.add(distractorSolid);
-  const d=mesh(new T.TorusGeometry(.065,.021,10,28,Math.PI*1.35),mats.distractor,-.13,.87,.37,distractorSolid);
-  d.rotation.x=Math.PI/2;d.rotation.z=.3;
+  box(.09,.085,.08,mats.distractor,-.12,tableLow+.0425,.37,distractorSolid);
   function worldPoint(p){return p.kind==='target'?p.local.clone().applyMatrix4(target.matrixWorld):p.local.clone()}
   function stableSoftmax(list,key){const max=Math.max(...list.map(key)),v=list.map(x=>Math.exp(key(x)-max)),s=v.reduce((a,b)=>a+b,0);return v.map(x=>x/s)}
   let shape=null;
@@ -273,7 +297,7 @@ window.Riemann3D = function Riemann3D(container, options) {
   function cameraPreset(){
     if(step===0){focus.set(0,.86,0);distance=2.35}
     else if(step<=2){focus.set(0,.86,0);distance=1.8}
-    else if(step<=7){focus.copy(derived.coarse).lerp(new T.Vector3(0,.84,0),.1);distance=1.02}
+    else if(step<=7){focus.copy(derived.coarse).lerp(new T.Vector3(0,.84,0),.36);distance=1.52}
     else{focus.set(0,.9,0);distance=1.9}
     viewCamera();
   }
@@ -378,7 +402,7 @@ window.Riemann3D = function Riemann3D(container, options) {
   }
   function setStep(n){step=n;refresh();cameraPreset()}
   function setMode(v){mode=v;refresh()}
-  function setTransform(degrees,pitchDegrees,translation){yaw=degrees*Math.PI/180;pitch=pitchDegrees*Math.PI/180;shift=translation;refresh();if(step>=3&&step<=7){focus.copy(derived.coarse).lerp(new T.Vector3(0,.84,0),.1);viewCamera()}}
+  function setTransform(degrees,pitchDegrees,translation){yaw=degrees*Math.PI/180;pitch=pitchDegrees*Math.PI/180;shift=translation;refresh();if(step>=3&&step<=7){focus.copy(derived.coarse).lerp(new T.Vector3(0,.84,0),.36);viewCamera()}}
   function setDistractor(show){options.hideDistractor=!show;refresh()}
   function setActionProgress(value){actionProgress=Math.max(0,Math.min(1,value));if(actionPlaying)actionStarted=performance.now()-actionProgress*4000;updateAction()}
   function setActionPlaying(playing){actionPlaying=playing;if(playing)actionStarted=performance.now()-actionProgress*4000}

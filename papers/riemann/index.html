@@ -54,11 +54,12 @@
         <label class="control-label"><input id="loop" type="checkbox" checked>Loop</label>
       </div>
       <div class="workflow" id="workflow" aria-label="Inference stages"></div>
+      <section class="stage-visual" id="stageVisual" aria-live="polite" hidden></section>
       <div class="world" id="scene3d">
         <div class="world-top"><strong id="worldTitle">Multi-view scene capture</strong><span id="worldSub">Cameras and the full RGB point cloud</span></div>
         <div class="world-hint">Drag to orbit · Scroll to zoom · Click points to inspect local values</div>
         <div class="world-bottom">
-          <div class="legend"><span><i class="swatch target"></i>Target</span><span><i class="swatch scene"></i>Scene</span><span><i class="swatch distractor"></i>Distractor</span><span><i class="swatch region"></i>ROI / field</span></div>
+          <div class="legend"><span><i class="swatch target"></i>Target</span><span><i class="swatch scene"></i>Scene</span><span><i class="swatch distractor"></i>Distractor block</span><span><i class="swatch region"></i>ROI / field</span></div>
           <div class="segmented compact" role="group" aria-label="3D display mode">
             <button type="button" data-mode="solid" aria-pressed="false">Solid</button>
             <button type="button" data-mode="both" aria-pressed="true">Overlay</button>
@@ -77,7 +78,7 @@
         <label>Target yaw <input id="rotation" type="range" min="-70" max="70" value="0"><output id="rotationVal">0°</output></label>
         <label>Target pitch <input id="pitch" type="range" min="-35" max="35" value="0"><output id="pitchVal">0°</output></label>
         <label>Target shift <input id="translation" type="range" min="-20" max="20" value="0"><output id="translationVal">0 cm</output></label>
-        <label class="check"><input id="distractor" type="checkbox" checked>Distractor</label>
+        <label class="check"><input id="distractor" type="checkbox" checked>Distractor block</label>
       </div>
       <div class="explain-grid">
         <article class="step-explain" id="detail" aria-live="polite"></article>
