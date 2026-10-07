@@ -9,7 +9,7 @@
   }
   const stages=[
     {short:'Scene input',title:'Multi-view RGB-D → full-scene point cloud',sub:'Six-camera fusion; no object segmentation',
-      desc:'The simulated setup uses six RGB-D cameras around an uneven table of radius 0.75 m. Their observations are fused and downsampled to 8,192 colored points. The mug, rack, robot, table, and distractors share one input cloud. This 3D reconstruction follows the task layout, but its geometry and displayed point count are not original simulator data.',
+      desc:'The paper simulates six RGB-D cameras around a table of radius 0.75 m with three sectors at two heights. Their observations are fused and downsampled to 8,192 colored points. The mug, rack, robot, table, and distractors share one input cloud. This teaching scene simplifies the table to a flat round cylinder; its geometry and displayed point count are not original simulator data.',
       formula:'P=\\{(x_i,c_i)\\}_{i=1}^{N},\\qquad x_i,c_i\\in\\mathbb{R}^{3}',
       input:'Multi-view depth and color',output:'N×6 scene cloud',ref:'§3.1 p.3; §5.1 p.6; Fig. 4 p.6',active:0},
     {short:'Type-0 RGB',title:'RGB as three type-0 fields',sub:'Coordinates remain geometry, not input features',
@@ -46,8 +46,8 @@
       input:'t̂, R̂ₒ; articulated task +d̂',output:'Robot target action',ref:'§3.1 p.3; §4.2 p.6; Appendix A.5.1 p.15',active:8}
   ];
   const visualStages=[
-    {lead:'Six RGB-D views describe the same workspace. Fusion produces one cloud containing the target, robot, and uneven table.',
-      items:[['cameras','Six RGB-D views','Color and depth from around the table'],['scene','Shared workspace','The raised table sector is 0.10 m higher'],['cloud','One point cloud P','Each dot has position and RGB']]},
+    {lead:'Six RGB-D views describe the same workspace. Fusion produces one cloud containing the target, robot, and table.',
+      items:[['cameras','Six RGB-D views','Color and depth from around the table'],['scene','Shared workspace','Objects rest on a flat round table in this teaching scene'],['cloud','One point cloud P','Each dot has position and RGB']]},
     {lead:'The network reads color as three scalar values at each point. 3D coordinates define where points are and which points are neighbors.',
       items:[['cloud','Point xᵢ','A location in 3D space'],['rgb','RGB values cᵢ','Three numbers attached to xᵢ'],['scalars','Three type-0 channels','R, G, and B stay scalar under rotation']]},
     {lead:'The saliency network compares nearby points through four local layers and assigns one score to every input point.',
