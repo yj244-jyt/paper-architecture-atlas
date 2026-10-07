@@ -2,6 +2,8 @@
 
 An independent collection of interactive, source-grounded research paper architecture visualizations. The site is static and publishes from the repository root with GitHub Pages.
 
+**Live site:** https://yj244-jyt.github.io/paper-architecture-atlas/
+
 ## Current entry
 
 - [RiEMann](papers/riemann/): full-scene RGB-D input, SE(3)-Transformer branches, training supervision, local equivariance, and illustrative robot actions.
