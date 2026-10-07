@@ -4,9 +4,10 @@ An independent collection of interactive, source-grounded research paper archite
 
 **Live site:** https://yj244-jyt.github.io/paper-architecture-atlas/
 
-## Current entry
+## Current entries
 
 - [RiEMann](papers/riemann/): full-scene RGB-D input, SE(3)-Transformer branches, training supervision, local equivariance, and illustrative robot actions.
+- [3D Diffusion Policy](papers/dp3/): single-view depth to point cloud, DP3 Encoder, conditional action diffusion, training objective, and reported results.
 
 Each visualization cites its primary paper. Procedural geometry, feature values, and trajectories are teaching reconstructions unless an entry explicitly says otherwise.
 
