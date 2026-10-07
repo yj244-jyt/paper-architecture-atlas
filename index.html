@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive, source-grounded visualizations of research paper architectures.">
+  <title>Paper Architecture Atlas</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="catalog.js" defer></script>
+  <script src="home.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="./">Paper Architecture Atlas</a>
+      <nav aria-label="Primary navigation">
+        <a href="#library" aria-current="page">Library</a>
+        <a href="#about">About</a>
+        <a href="https://github.com/yj244-jyt/paper-architecture-atlas" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <div class="intro-inner">
+        <div class="eyebrow">Interactive research archive</div>
+        <h1 id="page-title">Paper Architecture Atlas</h1>
+        <p>Explore research architectures as inspectable systems: inputs, intermediate representations, training paths, equations, and outputs.</p>
+        <div class="intro-meta"><span id="paper-count">1 visualization</span><span>Source-linked explanations</span><span>Desktop and mobile</span></div>
+      </div>
+    </section>
+    <section id="library" class="library" aria-labelledby="library-title">
+      <div class="section-head">
+        <div><div class="eyebrow">Library</div><h2 id="library-title">Visualizations</h2></div>
+        <label class="search-field"><span class="sr-only">Search papers</span><input id="search" type="search" placeholder="Search titles, authors, or topics" autocomplete="off"></label>
+      </div>
+      <div class="library-tools">
+        <div id="filters" class="filters" role="group" aria-label="Filter by topic"></div>
+        <label class="sort-field">Sort <select id="sort"><option value="newest">Newest first</option><option value="title">Title A-Z</option></select></label>
+      </div>
+      <div id="results" class="results" aria-live="polite"></div>
+      <p id="empty" class="empty" hidden>No papers match this search.</p>
+    </section>
+    <section id="about" class="about" aria-labelledby="about-title">
+      <div class="about-inner">
+        <div><div class="eyebrow">Method</div><h2 id="about-title">How to read these visualizations</h2></div>
+        <div class="about-copy">
+          <p>Each entry separates claims supported by the paper from teaching reconstructions. Equations and cited sections explain the architecture; interactive scenes illustrate behavior and are identified when they do not use the authors' trained model or simulator assets.</p>
+          <p>Open the paper and official implementation links alongside each visualization to inspect the primary sources.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer><div class="footer-inner"><span>Paper Architecture Atlas</span><span>Independent educational visualizations. Research credit belongs to the cited authors.</span></div></footer>
+</body>
+</html>

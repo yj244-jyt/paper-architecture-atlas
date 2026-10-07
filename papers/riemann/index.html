@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RiEMann | 3D Architecture and Training Explorer</title>
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']]},
+      svg: {fontCache: 'local'},
+      startup: {typeset: false}
+    };
+  </script>
+  <script src="vendor/three.min.js" defer></script>
+  <script src="vendor/mathjax-tex-svg.min.js" defer></script>
+  <script src="scene3d.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <div class="topline">
+      <div>
+        <div class="eyebrow">CoRL 2024 · Interactive paper architecture</div>
+        <h1>RiEMann <span>from scene point cloud to robot action</span></h1>
+        <p class="subtitle">A 3D teaching reconstruction grounded in Figures 3–4, Sections 3–4, and Appendix A.1–A.6</p>
+      </div>
+      <div class="header-links"><a class="source-link" href="../../">← Paper library</a><a class="source-link" id="paperLink" target="_blank" rel="noopener noreferrer">Original paper ↗</a></div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Explorer views">
+      <button class="tab" type="button" role="tab" aria-selected="true" aria-controls="inference" id="tab-inference">Inference</button>
+      <button class="tab" type="button" role="tab" aria-selected="false" aria-controls="training" id="tab-training">Training network</button>
+      <button class="tab" type="button" role="tab" aria-selected="false" aria-controls="equivariance" id="tab-equivariance">Local equivariance</button>
+    </nav>
+  </header>
+  <main>
+    <section class="view" id="inference" role="tabpanel" aria-labelledby="tab-inference">
+      <div class="toolbar">
+        <div class="segmented" role="group" aria-label="Paper experiment task">
+          <button type="button" data-task="mug" aria-pressed="true">Mug on rack</button>
+          <button type="button" data-task="plane" aria-pressed="false">Plane on shelf</button>
+          <button type="button" data-task="faucet" aria-pressed="false">Turn faucet</button>
+        </div>
+        <span class="toolbar-note" id="taskCaption">Grasp the mug → place it on the rack</span>
+        <span class="paper-chip">Simulation · 6 RGB-D cameras · 8,192 input points</span>
+      </div>
+      <div class="transport-bar">
+        <div class="transport"><button class="iconbtn" id="back" aria-label="Previous step" title="Previous step">‹</button><button class="iconbtn primary" id="play" aria-label="Play" title="Play">▶</button><button class="iconbtn" id="forward" aria-label="Next step" title="Next step">›</button></div>
+        <input id="scrub" type="range" min="0" max="8" step="1" value="0" aria-label="Inference progress">
+        <span class="counter" id="counter">01 / 09</span>
+        <label class="control-label">Speed <select id="speed" aria-label="Playback speed"><option value="1600">0.75×</option><option value="1100" selected>1×</option><option value="650">1.5×</option></select></label>
+        <label class="control-label"><input id="loop" type="checkbox" checked>Loop</label>
+      </div>
+      <div class="workflow" id="workflow" aria-label="Inference stages"></div>
+      <div class="world" id="scene3d">
+        <div class="world-top"><strong id="worldTitle">Multi-view scene capture</strong><span id="worldSub">Cameras and the full RGB point cloud</span></div>
+        <div class="world-hint">Drag to orbit · Scroll to zoom · Click points to inspect local values</div>
+        <div class="world-bottom">
+          <div class="legend"><span><i class="swatch target"></i>Target</span><span><i class="swatch scene"></i>Scene</span><span><i class="swatch distractor"></i>Distractor</span><span><i class="swatch region"></i>ROI / field</span></div>
+          <div class="segmented compact" role="group" aria-label="3D display mode">
+            <button type="button" data-mode="solid" aria-pressed="false">Solid</button>
+            <button type="button" data-mode="both" aria-pressed="true">Overlay</button>
+            <button type="button" data-mode="points" aria-pressed="false">Points</button>
+          </div>
+        </div>
+        <div id="sceneError" class="scene-error" hidden>The 3D scene could not start. Check WebGL support in your browser.</div>
+      </div>
+      <div class="action-bar" id="actionBar" hidden>
+        <button type="button" class="iconbtn primary" id="actionPlay" aria-label="Play task action" title="Play task action">▶</button>
+        <input id="actionScrub" type="range" min="0" max="100" value="0" aria-label="Task action progress">
+        <span id="actionCaption">Approach target</span>
+        <small>Illustrative path · Not an original planner output</small>
+      </div>
+      <div class="manipulation">
+        <label>Target yaw <input id="rotation" type="range" min="-70" max="70" value="0"><output id="rotationVal">0°</output></label>
+        <label>Target pitch <input id="pitch" type="range" min="-35" max="35" value="0"><output id="pitchVal">0°</output></label>
+        <label>Target shift <input id="translation" type="range" min="-20" max="20" value="0"><output id="translationVal">0 cm</output></label>
+        <label class="check"><input id="distractor" type="checkbox" checked>Distractor</label>
+      </div>
+      <div class="explain-grid">
+        <article class="step-explain" id="detail" aria-live="polite"></article>
+        <aside class="step-side">
+          <h2>Point inspector</h2><p id="pointReadout" aria-live="polite">Click a point in the 3D cloud to inspect its position, ROI membership, and illustrative weight.</p>
+          <div id="microFlow" class="micro-flow"></div>
+          <p class="caveat">Scene geometry follows the paper's tasks. Displayed point counts, weights, and neural-field values are teaching illustrations, not outputs of the authors' trained model.</p>
+        </aside>
+      </div>
+      <div class="facts-band">
+        <div><b>Position</b><span>Type-0 affordance → Softmax → weighted coordinates</span></div>
+        <div><b>Orientation</b><span>Three type-1 vector fields → r₂ mean pooling → IMGS</span></div>
+        <div><b>Control</b><span>6-DoF end-effector target → external collision-aware planner</span></div>
+      </div>
+      <div class="source-figure"><div><b>Compare with the source</b><p>Figure 4 in the <a href="https://arxiv.org/abs/2403.19460" target="_blank" rel="noopener noreferrer">original paper ↗</a> shows the simulation and real-world tasks. The interactive scene above reconstructs their task elements; it is not the original simulator output.</p></div></div>
+    </section>
+    <section class="view" id="training" role="tabpanel" aria-labelledby="tab-training" hidden>
+      <div class="section-intro"><div><span class="eyebrow">Algorithm 1 · Figure 3 · Table 3</span><h2>How the three SE(3)-Transformers are trained</h2></div><p>The diagram uses the reported four layers, maximum type-l, head count, channels, and neighborhood distances. Per-layer tensor widths were not specified in the paper.</p></div>
+      <div class="transport-bar train-transport">
+        <div class="transport"><button class="iconbtn" id="trainBack" aria-label="Previous training step" title="Previous step">‹</button><button class="iconbtn primary" id="trainPlay" aria-label="Play training" title="Play">▶</button><button class="iconbtn" id="trainForward" aria-label="Next training step" title="Next step">›</button></div>
+        <input id="trainScrub" type="range" min="0" max="6" step="1" value="0" aria-label="Training progress">
+        <span class="counter" id="trainCounter">01 / 07</span>
+        <label class="control-label"><input id="trainLoop" type="checkbox" checked>Loop</label>
+      </div>
+      <div class="training-phase" id="trainingPhase"></div>
+      <div class="network-area">
+        <div class="network-head"><span>Demonstration P, T</span><span>φ · full scene</span><span>ψ₁ / ψ₂ · local ROI</span><span>Loss and update</span></div>
+        <svg id="networkGraph" class="network-graph" viewBox="0 0 1100 480" role="img" aria-label="Interactive three-branch RiEMann network and training supervision diagram"></svg>
+        <div id="networkMobile" class="network-mobile"></div>
+      </div>
+      <div class="explain-grid training-explain">
+        <article class="step-explain" id="trainDetail" aria-live="polite"></article>
+        <aside class="step-side" id="nodeDetail"><h2>Network node</h2><p>Select a network, tensor, or loss node to inspect its representation type and reported parameters.</p></aside>
+      </div>
+      <div class="reference-band">
+        <section><h2>Network hyperparameters</h2><table class="table"><thead><tr><th>Network</th><th>Layers</th><th>Max type-l</th><th>Heads</th><th>Channels</th><th>Message radius</th></tr></thead><tbody><tr><td>φ</td><td>4</td><td>4</td><td>1</td><td>8</td><td>0.10 m</td></tr><tr><td>ψ₁</td><td>4</td><td>3</td><td>1</td><td>8</td><td>0.07 m</td></tr><tr><td>ψ₂</td><td>4</td><td>4</td><td>1</td><td>8</td><td>0.07 m</td></tr></tbody></table><small>Appendix Table 3, p.14. Maximum type-l is not the output-field type.</small></section>
+        <section><h2>Reported experimental setup</h2><p>200 epochs · batch size 4 · learning rate 10⁻⁴ per network · one A40 GPU. Real-world clouds use task-specific 1 cm or 2 cm voxel downsampling and color perturbation. The paper reports no segmentation, pretraining, or pose augmentation.</p><small>Appendix A.4, pp.13–14. The optimizer, per-layer tensor widths, and exact code interfaces are not specified in the paper.</small></section>
+      </div>
+    </section>
+    <section class="view" id="equivariance" role="tabpanel" aria-labelledby="tab-equivariance" hidden>
+      <div class="section-intro"><div><span class="eyebrow">Equations (1)–(4)</span><h2>Move only the target: how should the action transform?</h2></div><p>The wireframe shows the original pose; the solid shows the transformed target. Background, rack, and robot stay fixed. This illustrates the theoretical relation, not an error test of trained weights.</p></div>
+      <div class="toolbar"><div class="segmented" role="group" aria-label="Local equivariance task"><button type="button" data-task="mug" aria-pressed="true">Mug on rack</button><button type="button" data-task="plane" aria-pressed="false">Plane on shelf</button><button type="button" data-task="faucet" aria-pressed="false">Turn faucet</button></div><span class="toolbar-note">Wireframe = before · Solid = after</span></div>
+      <div class="world equiv-world" id="equiv3d"><div class="world-top"><strong>Original pose → transformed pose</strong><span>Local SE(3) · 3D</span></div><div class="world-hint">Drag to orbit · Scroll to zoom</div><div id="equivError" class="scene-error" hidden>The 3D scene could not start.</div></div>
+      <div class="manipulation">
+        <label>Yaw Q<sub>y</sub> <input id="eqRot" type="range" min="-70" max="70" value="35"><output id="eqRotVal">35°</output></label>
+        <label>Pitch Q<sub>x</sub> <input id="eqPitch" type="range" min="-35" max="35" value="15"><output id="eqPitchVal">15°</output></label>
+        <label>Shift u<sub>x</sub> <input id="eqMove" type="range" min="-20" max="20" value="12"><output id="eqMoveVal">12 cm</output></label>
+      </div>
+      <div class="equiv-formulas">
+        <section><h2>Type-0 · invariant scalars</h2><div class="math-display">\[f_0^{\,gP}(Qx+u)=f_0^{\,P}(x)\]</div><p>Color, saliency, and position weights move with the same object point as scalars; rotation does not turn them into vectors.</p></section>
+        <section><h2>Position · normalized weights</h2><div class="math-display">\[\hat t'=\sum_i\alpha_i(Qx_i+u)=Q\hat t+u,\quad\sum_i\alpha_i=1\]</div><p>With invariant weights on the same target points, the weighted position rotates and translates with the object.</p></section>
+        <section><h2>Type-1 · equivariant vectors</h2><div class="math-display">\[v_k'=Qv_k,\qquad \hat R_o'=Q\hat R_o\]</div><p>All three orientation axes rotate together; local pooling and orthogonalization preserve left multiplication by Q.</p></section>
+      </div>
+      <p class="source-note">Paper §§3.1–4.1, pp.3–5. Interactions between target neighborhoods and distractors affect the trained model's local equivariance; these equations show the ideal construction.</p>
+    </section>
+  </main>
+  <footer class="footer">Gao et al., RiEMann, CoRL 2024. The 3D geometry and feature fields are teaching reconstructions of paper tasks; original simulator frames, trained weights, and pointwise predictions were not supplied by the paper.</footer>
+</div>
+</body>
+</html>
