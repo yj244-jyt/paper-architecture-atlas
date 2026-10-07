@@ -71,6 +71,10 @@ h3{font-size:14px;margin:0 0 5px}
 .visual-head p{margin:0;color:#3e5156;font-size:12px;line-height:1.5}
 .visual-flow{display:flex;align-items:stretch;gap:8px}
 .visual-item{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #dce8e2;border-radius:4px;background:#f7faf8}
+.visual-item{animation:visual-flow-focus 2.4s ease-in-out infinite;animation-delay:calc(var(--flow-index)*.8s)}
+.visual-item svg{animation:visual-glyph-move 2.4s ease-in-out infinite;animation-delay:calc(var(--flow-index)*.8s)}
+@keyframes visual-flow-focus{0%,28%,100%{border-color:#dce8e2;background:#f7faf8}12%{border-color:#65aa96;background:#e8f5ef}}
+@keyframes visual-glyph-move{0%,28%,100%{transform:translateY(0)}12%{transform:translateY(-4px)}}
 .visual-item svg{display:block;flex:none;width:112px;height:70px}
 .visual-item strong,.visual-item span{display:block;line-height:1.35}
 .visual-item strong{font-size:12px}
@@ -124,6 +128,16 @@ h3{font-size:14px;margin:0 0 5px}
 .network-graph .edge{fill:none;stroke:#a2b9b2;stroke-width:2}
 .network-graph .edge.active{stroke:#008477;stroke-width:3}
 .network-graph .edge.gradient{stroke:#b64e45;stroke-width:3;stroke-dasharray:6 4}
+.network-graph .edge.active{stroke-dasharray:10 7;animation:edge-flow 1s linear infinite}
+.network-graph .edge.gradient{animation:edge-flow-reverse 1s linear infinite}
+.network-graph .flow-token{pointer-events:none;filter:drop-shadow(0 0 3px rgba(0,126,112,.4))}
+.network-graph .node.active .train-layer{animation:train-layer-pulse 1.6s ease-in-out infinite}
+.network-graph .sample-dot{fill:#007e70;opacity:.28}
+.network-graph .node.active .sample-dot{animation:sample-signal 1.15s ease-in-out infinite}
+@keyframes edge-flow{to{stroke-dashoffset:-17}}
+@keyframes edge-flow-reverse{to{stroke-dashoffset:17}}
+@keyframes train-layer-pulse{0%,100%{fill:#bde4d7}30%{fill:#55b49b}}
+@keyframes sample-signal{0%,100%{opacity:.28}38%{opacity:1}}
 .network-graph .node{cursor:pointer}
 .network-graph .node rect{fill:#fff;stroke:#b6ccc4;stroke-width:1.5}
 .network-graph .node.active rect{fill:#dff2ed;stroke:#007e70;stroke-width:2}
@@ -144,6 +158,10 @@ h3{font-size:14px;margin:0 0 5px}
 .table th,.table td{padding:7px 6px;text-align:left;border-bottom:1px solid #dce7e1;white-space:nowrap}
 .table th{font-weight:700;color:var(--muted)}
 .equiv-world{height:min(60vh,620px);min-height:430px}
+.equiv-playback{display:flex;align-items:center;gap:12px;padding:9px 24px;background:#e8f3ee;border-bottom:1px solid var(--line)}
+.equiv-playback input{flex:1;min-width:90px;accent-color:var(--teal)}
+.equiv-playback span{font-size:12px;color:var(--teal);font-weight:700;white-space:nowrap}
+.equiv-playback .equiv-key{color:var(--muted);font-size:11px;font-weight:500}
 .equiv-formulas{display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:#fff;border-bottom:1px solid var(--line)}
 .equiv-formulas section{padding:20px 22px;border-right:1px solid var(--line);min-width:0}
 .equiv-formulas section:last-child{border-right:0}
@@ -173,6 +191,8 @@ h3{font-size:14px;margin:0 0 5px}
   .tab{flex:1;padding:9px 3px;font-size:12px}
   .toolbar,.transport-bar,.manipulation{padding:10px 14px}
   .action-bar{padding:9px 14px;flex-wrap:wrap;gap:8px}
+  .equiv-playback{padding:9px 14px;flex-wrap:wrap;gap:8px}
+  .equiv-playback .equiv-key{flex-basis:100%;text-align:right}
   .action-bar small{flex-basis:100%;text-align:right}
   .toolbar-note{order:3;flex-basis:100%}
   .paper-chip{display:none}
@@ -224,6 +244,10 @@ h3{font-size:14px;margin:0 0 5px}
   .mn-layers{display:flex;gap:2px;margin-top:6px}
   .mn-layers i{font-style:normal;font-size:10px;border:1px solid #a9c4b9;background:#f1f8f4;padding:2px 3px;flex:1;text-align:center}
   .network-mobile button.active{background:var(--teal-light);border-color:var(--teal)}
+  .network-mobile button.active{animation:mobile-node-signal 2s ease-in-out infinite}
+  .network-mobile .mn-arrow{animation:mobile-arrow-flow 1.5s ease-in-out infinite}
+  @keyframes mobile-node-signal{0%,100%{background:#e4f2eb}50%{background:#c3e7d8}}
+  @keyframes mobile-arrow-flow{0%,100%{opacity:.42;transform:translateY(-2px)}50%{opacity:1;transform:translateY(2px)}}
   .network-mobile button.selected{box-shadow:inset 0 0 0 2px var(--red)}
   .table{font-size:11px}
   .reference-band section:first-child{overflow-x:auto}
@@ -235,3 +259,4 @@ h3{font-size:14px;margin:0 0 5px}
   .table{font-size:10px}
   .world-bottom .segmented button{padding:4px}
 }
+@media(prefers-reduced-motion:reduce){.visual-item,.visual-item svg,.network-graph .edge.active,.network-graph .edge.gradient,.network-graph .node.active .train-layer,.network-graph .node.active .sample-dot,.network-mobile button.active,.network-mobile .mn-arrow{animation:none}}

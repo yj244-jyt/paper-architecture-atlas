@@ -15,11 +15,15 @@ window.Riemann3D = function Riemann3D(container, options) {
   const canvas = renderer.domElement;
   const focus = new T.Vector3(0, 0.68, 0);
   let azimuth = 0.82, elevation = 0.38, distance = 2.55;
+  let cameraTween = null;
   let task = 'mug', mode = 'both', step = 0, yaw = 0, pitch = 0, shift = 0;
   let target = null, destination = null, ghost = null, actionGhost = null, pointMesh = null, points = [];
   let roiSphere = null, poolSphere = null, axes = null, ghostAxes = null, directionArrow = null, selectedMarker = null, motionLine = null, gripper = null;
-  let fieldArrows = [], neighborLines = [], rawAxes = [], cameras = [], robotSegments = [], selected = null, derived = null;
-  let disposed = false, pointerDown = null, dragMoved = false;
+  let fieldArrows = [], neighborLines = [], rawAxes = [], aggregationLines = [], cameras = [], robotSegments = [], selected = null, derived = null;
+  let stageStarted = performance.now(), stageDuration = 2400, markerSources = [], baseColors = null;
+  const signalMarkers = [], rawBasis = [new T.Vector3(1,.2,.06),new T.Vector3(.13,1,.14),new T.Vector3(.08,.17,1)];
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let disposed = false, active = true, pointerDown = null, dragMoved = false;
   let actionProgress = 0, actionPlaying = false, actionStarted = 0;
   const raycaster = new T.Raycaster();
   raycaster.params.Points.threshold = 0.018;
@@ -215,7 +219,7 @@ window.Riemann3D = function Riemann3D(container, options) {
     s.castShadow=false;return s;
   }
   function createOverlays(){
-    roiSphere=sphere(.2,0x008477,.11);poolSphere=sphere(.02,0xc34d43,.27);
+    roiSphere=sphere(.2,0x008477,.11);poolSphere=sphere(.02,0xc34d43,.42);
     selectedMarker=sphere(.015,0x101f25,.9);
     axes=new T.AxesHelper(.14);scene.add(axes);
     if(options.comparison){ghostAxes=new T.AxesHelper(.14);scene.add(ghostAxes)}
@@ -225,11 +229,16 @@ window.Riemann3D = function Riemann3D(container, options) {
     box(.065,.025,.035,new T.MeshBasicMaterial({color:0x1d846f,transparent:true,opacity:.52}),0,0,0,gripper);
     box(.01,.055,.012,new T.MeshBasicMaterial({color:0x1d846f,transparent:true,opacity:.52}),-.029,-.033,0,gripper);
     box(.01,.055,.012,new T.MeshBasicMaterial({color:0x1d846f,transparent:true,opacity:.52}),.029,-.033,0,gripper);
+    for(let i=0;i<18;i++){
+      const marker=ball(.015,new T.MeshBasicMaterial({color:i%3===0?0xb64e45:i%3===1?0x007e70:0x315d91,transparent:true,opacity:.9,depthWrite:false}),0,0,0);
+      marker.castShadow=false;marker.visible=false;signalMarkers.push(marker);
+    }
   }
   createOverlays();
   function removeFieldArrows(){for(const a of fieldArrows){scene.remove(a);a.line.geometry.dispose();a.line.material.dispose();a.cone.geometry.dispose();a.cone.material.dispose()}fieldArrows=[]}
   function removeNeighbors(){for(const o of neighborLines){scene.remove(o);o.geometry.dispose();o.material.dispose()}neighborLines=[]}
   function removeRawAxes(){for(const o of rawAxes){scene.remove(o);o.geometry.dispose();o.material.dispose()}rawAxes=[]}
+  function removeAggregationLines(){for(const o of aggregationLines){scene.remove(o);o.geometry.dispose();o.material.dispose()}aggregationLines=[]}
   function makeActionGhost(){
     if(actionGhost)clearObject(actionGhost);
     actionGhost=target.clone(true);
@@ -268,11 +277,12 @@ window.Riemann3D = function Riemann3D(container, options) {
     if(options.onActionProgress)options.onActionProgress(p,actionCaption(p));
   }
   function cameraPreset(){
-    if(step===0){focus.set(0,.68,0);distance=2.55}
-    else if(step<=2){focus.set(0,.68,0);distance=2.15}
-    else if(step<=7){focus.copy(derived.coarse).lerp(new T.Vector3(0,.84,0),.36);distance=1.52}
-    else{focus.set(0,.9,0);distance=1.9}
-    viewCamera();
+    const nextFocus=new T.Vector3();let nextDistance;
+    if(step===0){nextFocus.set(0,.68,0);nextDistance=2.55}
+    else if(step<=2){nextFocus.set(0,.68,0);nextDistance=2.15}
+    else if(step<=7){nextFocus.copy(derived.coarse).lerp(new T.Vector3(0,.84,0),.36);nextDistance=1.18}
+    else{nextFocus.set(0,.9,0);nextDistance=1.9}
+    cameraTween={from:focus.clone(),to:nextFocus,fromDistance:distance,toDistance:nextDistance,start:performance.now()};
   }
   function refresh(){
     if(!target)return;
@@ -289,10 +299,12 @@ window.Riemann3D = function Riemann3D(container, options) {
       color.setXYZ(i,c.r,c.g,c.b);
     }
     position.needsUpdate=true;color.needsUpdate=true;pointMesh.geometry.computeBoundingSphere();
+    baseColors=color.array.slice();
+    markerSources=derived.roi.filter((p,i)=>p.kind==='target'&&i%27===0).slice(0,18);
     const showSolid=mode!=='points',showPoints=mode!=='solid'||step>=1&&step<=6;
     target.visible=showSolid;destination&&(destination.visible=showSolid);distractorSolid.visible=showSolid&&options.hideDistractor!==true;
     pointMesh.visible=showPoints;
-    roiSphere.visible=step>=3&&step<=6;roiSphere.position.copy(derived.coarse);
+    roiSphere.visible=step>=3&&step<=5;roiSphere.position.copy(derived.coarse);
     poolSphere.visible=step>=6&&step<=7;poolSphere.position.copy(derived.fine);
     axes.visible=step>=7;axes.position.copy(derived.fine);axes.quaternion.copy(target.quaternion);
     directionArrow.visible=task==='faucet'&&step>=6;
@@ -306,6 +318,7 @@ window.Riemann3D = function Riemann3D(container, options) {
     removeFieldArrows();
     removeNeighbors();
     removeRawAxes();
+    removeAggregationLines();
     if(selected!==null&&(step===2||step===4)){
       const p=points[selected],v=worldPoint(p),radius=step===2?.10:.07;
       const neighbors=derived.visible.filter(q=>q!==p&&worldPoint(q).distanceTo(v)<=radius).slice(0,35);
@@ -328,11 +341,17 @@ window.Riemann3D = function Riemann3D(container, options) {
       }
     }
     if(step===7){
-      const raw=[new T.Vector3(1,.2,.06),new T.Vector3(.13,1,.14),new T.Vector3(.08,.17,1)];
-      for(const v of raw){
+      for(const v of rawBasis){
         const u=v.clone().normalize().applyQuaternion(target.quaternion).multiplyScalar(.15).add(derived.fine);
         const o=line([derived.fine.x,derived.fine.y,derived.fine.z],[u.x,u.y,u.z],0x9c6f25,.9);
         rawAxes.push(o);
+      }
+    }
+    if(step===5||step===6){
+      const source=step===5?markerSources:derived.local.filter((_,i)=>i%3===0);
+      for(const p of source.slice(0,12)){
+        const from=worldPoint(p),to=derived.fine;
+        aggregationLines.push(line([from.x,from.y,from.z],[to.x,to.y,to.z],step===5?0xa77924:0x315d91,.43));
       }
     }
     if(motionLine){scene.remove(motionLine);motionLine.geometry.dispose();motionLine.material.dispose();motionLine=null}
@@ -349,6 +368,7 @@ window.Riemann3D = function Riemann3D(container, options) {
       ghostAxes.visible=true;ghostAxes.position.copy(shape.grip.clone().applyMatrix4(ghost.matrixWorld));
     }
     updateAction();
+    animateStage(performance.now());
     if(selected!==null&&options.onSelect)options.onSelect(info());
   }
   function info(){
@@ -373,9 +393,11 @@ window.Riemann3D = function Riemann3D(container, options) {
     actionProgress=0;actionPlaying=false;
     refresh();cameraPreset();return shape.label;
   }
-  function setStep(n){step=n;refresh();cameraPreset()}
+  function setStep(n){step=n;stageStarted=performance.now();refresh();cameraPreset()}
+  function setAnimationDuration(ms){stageDuration=ms}
+  function setActive(value){active=value;if(active)stageStarted=performance.now()}
   function setMode(v){mode=v;refresh()}
-  function setTransform(degrees,pitchDegrees,translation){yaw=degrees*Math.PI/180;pitch=pitchDegrees*Math.PI/180;shift=translation;refresh();if(step>=3&&step<=7){focus.copy(derived.coarse).lerp(new T.Vector3(0,.84,0),.36);viewCamera()}}
+  function setTransform(degrees,pitchDegrees,translation){yaw=degrees*Math.PI/180;pitch=pitchDegrees*Math.PI/180;shift=translation;refresh();if(step>=3&&step<=7){cameraTween=null;focus.copy(derived.coarse).lerp(new T.Vector3(0,.84,0),.36);viewCamera()}}
   function setDistractor(show){options.hideDistractor=!show;refresh()}
   function setActionProgress(value){actionProgress=Math.max(0,Math.min(1,value));if(actionPlaying)actionStarted=performance.now()-actionProgress*4000;updateAction()}
   function setActionPlaying(playing){actionPlaying=playing;if(playing)actionStarted=performance.now()-actionProgress*4000}
@@ -385,7 +407,7 @@ window.Riemann3D = function Riemann3D(container, options) {
     camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);viewCamera();
   }
   const observer=new ResizeObserver(resize);observer.observe(container);
-  function down(e){pointerDown={x:e.clientX,y:e.clientY,azimuth,elevation};dragMoved=false;canvas.setPointerCapture(e.pointerId)}
+  function down(e){cameraTween=null;pointerDown={x:e.clientX,y:e.clientY,azimuth,elevation};dragMoved=false;canvas.setPointerCapture(e.pointerId)}
   function move(e){if(!pointerDown)return;const dx=e.clientX-pointerDown.x,dy=e.clientY-pointerDown.y;if(Math.abs(dx)+Math.abs(dy)>4)dragMoved=true;azimuth=pointerDown.azimuth-dx*.007;elevation=Math.max(-.05,Math.min(1.15,pointerDown.elevation+dy*.005));viewCamera()}
   function up(e){
     if(!pointerDown)return;pointerDown=null;
@@ -395,15 +417,89 @@ window.Riemann3D = function Riemann3D(container, options) {
     raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObject(pointMesh)[0];
     if(hit){selected=hit.index;refresh()}else{selected=null;refresh();if(options.onSelect)options.onSelect(null)}
   }
-  function wheel(e){e.preventDefault();distance=Math.max(.55,Math.min(5,distance+e.deltaY*.002));viewCamera()}
+  function wheel(e){e.preventDefault();cameraTween=null;distance=Math.max(.55,Math.min(5,distance+e.deltaY*.002));viewCamera()}
   canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('wheel',wheel,{passive:false});
+  function animateStage(now){
+    if(options.comparison||!pointMesh||!derived)return;
+    const phase=reducedMotion.matches?1:((now-stageStarted)%stageDuration)/stageDuration;
+    const smooth=x=>x*x*(3-2*x);
+    signalMarkers.forEach(marker=>marker.visible=false);
+    if(step===0){
+      const center=target.position.clone().add(new T.Vector3(0,.09,0));
+      cameras.forEach((entry,i)=>{
+        entry.cone.material.opacity=.035+.09*(.5+.5*Math.sin(phase*Math.PI*2-i*.7));
+        const marker=signalMarkers[i];marker.visible=true;
+        const travel=(phase+i/6)%1;
+        marker.position.copy(entry.g.position).lerp(center,travel);
+        marker.scale.setScalar(.7+.6*Math.sin(Math.PI*travel));
+      });
+    }
+    if(step===1||step===2){
+      const color=pointMesh.geometry.attributes.color;
+      const channel=Math.min(2,Math.floor(phase*3));
+      for(let i=0;i<points.length;i++){
+        const p=points[i],at=i*3;
+        if(step===1){
+          const gain=p.kind==='target'?1.7:.62;
+          color.setXYZ(i,baseColors[at]*(channel===0?gain:.16),baseColors[at+1]*(channel===1?gain:.16),baseColors[at+2]*(channel===2?gain:.16));
+        }else{
+          const reveal=Math.max(0,Math.min(1,(phase*1.3-(i%17)/20)*5));
+          const signal=p.kind==='target'?Math.max(0,Math.min(1,(p.score-3)/5))*reveal:0;
+          color.setXYZ(i,baseColors[at]*(.47+.35*reveal)+signal*.5,baseColors[at+1]*(.47+.25*reveal)+signal*.12,baseColors[at+2]*(.47+.2*reveal));
+        }
+      }
+      color.needsUpdate=true;
+    }
+    if(step===3){
+      const scale=.12+.88*smooth(Math.min(1,phase*1.4));
+      roiSphere.scale.setScalar(scale);
+      roiSphere.material.opacity=.08+.09*(1-phase);
+      const marker=signalMarkers[0];marker.visible=true;
+      marker.position.copy(derived.coarse);marker.scale.setScalar(1+1.3*(1-phase));
+    }else roiSphere.scale.setScalar(1);
+    if(step===4){
+      fieldArrows.forEach((arrow,i)=>arrow.scale.setScalar(.12+.88*smooth(Math.max(0,Math.min(1,phase*3-(i%3)*.43)))));
+    }
+    if(step===5||step===6){
+      const source=step===5?markerSources:derived.local.length?derived.local:markerSources;
+      const count=Math.min(signalMarkers.length,source.length);
+      for(let i=0;i<count;i++){
+        const marker=signalMarkers[i],from=worldPoint(source[i]),travel=(phase+i/count)%1;
+        marker.visible=true;marker.position.copy(from).lerp(derived.fine,smooth(travel));
+        marker.scale.setScalar(.5+1.1*Math.sin(Math.PI*travel));
+      }
+      if(step===6){
+        poolSphere.scale.setScalar(.7+.5*Math.sin(phase*Math.PI*2)**2);
+        fieldArrows.forEach((arrow,i)=>arrow.scale.setScalar(.35+.65*smooth(Math.max(0,Math.min(1,phase*3-i*.55)))));
+      }
+    }else poolSphere.scale.setScalar(1);
+    if(step===7){
+      const progress=smooth(Math.min(1,phase*1.25));
+      rawAxes.forEach((axis,i)=>{
+        const raw=rawBasis[i].clone().normalize(),orth=new T.Vector3().setComponent(i,1);
+        const end=raw.lerp(orth,progress).applyQuaternion(target.quaternion).multiplyScalar(.15).add(derived.fine);
+        const position=axis.geometry.attributes.position;
+        position.setXYZ(1,end.x,end.y,end.z);position.needsUpdate=true;
+        axis.material.opacity=.95-.72*progress;
+      });
+      axes.scale.setScalar(.12+.88*progress);
+    }else axes.scale.setScalar(1);
+  }
   function animate(){
     if(disposed)return;
     requestAnimationFrame(animate);
+    if(!active)return;
+    if(cameraTween){
+      const p=Math.min(1,(performance.now()-cameraTween.start)/650),e=p*p*(3-2*p);
+      focus.copy(cameraTween.from).lerp(cameraTween.to,e);
+      distance=cameraTween.fromDistance+(cameraTween.toDistance-cameraTween.fromDistance)*e;
+      viewCamera();if(p===1)cameraTween=null;
+    }
     if(actionPlaying&&step===8&&!options.comparison){actionProgress=((performance.now()-actionStarted)%4000)/4000;updateAction()}
+    animateStage(performance.now());
     renderer.render(scene,camera);
   }
   taskChange(task);resize();animate();
-  return {setTask:taskChange,setStep,setMode,setTransform,setDistractor,setActionProgress,setActionPlaying,resize,info,getDerived:()=>derived,getCanvas:()=>canvas,getRenderer:()=>renderer,
+  return {setTask:taskChange,setStep,setMode,setTransform,setDistractor,setActionProgress,setActionPlaying,setAnimationDuration,setActive,resize,info,getDerived:()=>derived,getCanvas:()=>canvas,getRenderer:()=>renderer,
     dispose(){disposed=true;observer.disconnect();renderer.dispose()}};
 };

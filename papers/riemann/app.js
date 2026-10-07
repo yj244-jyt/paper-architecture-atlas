@@ -96,7 +96,7 @@
   function renderVisual(){
     const data=visualStages[step];
     const root=el('stageVisual');
-    root.innerHTML='<div class="visual-head"><span class="eyebrow">What changes in this step</span><p>'+data.lead+'</p></div><div class="visual-flow">'+data.items.map(([kind,title,detail],i)=>'<div class="visual-item">'+visualGlyph(kind)+'<div><strong>'+title+'</strong><span>'+detail+'</span></div></div>'+(i<2?'<div class="visual-arrow" aria-hidden="true">→</div>':'')).join('')+'</div>';
+    root.innerHTML='<div class="visual-head"><span class="eyebrow">What changes in this step</span><p>'+data.lead+'</p></div><div class="visual-flow">'+data.items.map(([kind,title,detail],i)=>'<div class="visual-item" style="--flow-index:'+i+'">'+visualGlyph(kind)+'<div><strong>'+title+'</strong><span>'+detail+'</span></div></div>'+(i<2?'<div class="visual-arrow" aria-hidden="true">→</div>':'')).join('')+'</div>';
     root.hidden=false;
   }
   const trainStages=[
@@ -172,7 +172,11 @@
     const previous=step;step=Math.max(0,Math.min(8,n));outputTicks=0;
     if(inferenceScene&&previous===8&&step!==8){inferenceScene.setActionPlaying(false);inferenceScene.setActionProgress(0);actionManual=false;el('actionPlay').textContent='▶'}
     renderStep();
-    if(inferenceScene&&step===8){inferenceScene.setActionProgress(0);if(timer){inferenceScene.setActionPlaying(true);el('actionPlay').textContent='Ⅱ'}}
+    if(inferenceScene&&step===8){
+      const autoplay=!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      inferenceScene.setActionProgress(0);inferenceScene.setActionPlaying(autoplay);actionManual=autoplay;
+      el('actionPlay').textContent=autoplay?'Ⅱ':'▶';el('actionPlay').setAttribute('aria-label',autoplay?'Pause task action':'Play task action');
+    }
   }
   function stop(){
     if(timer){clearInterval(timer);timer=null}
@@ -182,6 +186,7 @@
   }
   function play(){
     if(timer)return;
+    if(inferenceScene)inferenceScene.setAnimationDuration(Number(el('speed').value));
     el('play').textContent='Ⅱ';el('play').setAttribute('aria-label','Pause');
     if(step===8&&inferenceScene){inferenceScene.setActionPlaying(true);el('actionPlay').textContent='Ⅱ'}
     timer=setInterval(()=>{
@@ -197,7 +202,8 @@
   el('back').addEventListener('click',()=>setStep(step-1));
   el('forward').addEventListener('click',()=>setStep(step+1));
   el('scrub').addEventListener('input',e=>setStep(Number(e.target.value)));
-  el('speed').addEventListener('change',()=>{if(timer){stop();play()}});
+  el('speed').addEventListener('change',()=>{if(inferenceScene)inferenceScene.setAnimationDuration(Number(el('speed').value));if(timer){stop();play()}});
+  if(inferenceScene)inferenceScene.setAnimationDuration(Number(el('speed').value));
   el('actionPlay').addEventListener('click',()=>{
     if(timer)stop();
     actionManual=!actionManual;
@@ -241,9 +247,10 @@
     g.append(svg('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:4}));
     const title=svg('text',{x:n.x+11,y:n.y+21});title.textContent=n.title;g.append(title);
     const sub=svg('text',{x:n.x+11,y:n.y+39,class:'tiny'});sub.textContent=n.sub;g.append(sub);
+    if(n.id==='sample')for(let j=0;j<6;j++)g.append(svg('circle',{cx:n.x+19+j*18,cy:n.y+61+(j%2)*8,r:3,class:'sample-dot',style:'animation-delay:'+j*.19+'s'}));
     if(n.layers){
       for(let j=0;j<n.layers;j++){
-        const box=svg('rect',{x:n.x+11+j*39,y:n.y+63,width:31,height:38,rx:2,fill:active?'#bde4d7':'#eaf3ef',stroke:'#9bbfb2'});
+        const box=svg('rect',{x:n.x+11+j*39,y:n.y+63,width:31,height:38,rx:2,class:'train-layer',style:'animation-delay:'+j*.28+'s',fill:active?'#bde4d7':'#eaf3ef',stroke:'#9bbfb2'});
         g.append(box);
         const label=svg('text',{x:n.x+22+j*39,y:n.y+86,class:'tiny'});label.textContent='L'+(j+1);g.append(label);
       }
@@ -256,10 +263,15 @@
   function drawNetwork(){
     const graph=el('networkGraph');graph.replaceChildren();
     const active=phaseNodeSets[trainStep];
-    for(const [from,to,path] of links){
-      const isActive=active.has(from)&&active.has(to),reverse=trainStep===6&&isActive&&to!=='imgs';
+    links.forEach(([from,to,path],index)=>{
+      const isActive=active.has(from)&&active.has(to),reverse=trainStep===6&&isActive&&from!=='sample'&&to!=='imgs';
       graph.append(svg('path',{d:path,class:'edge'+(isActive?' active':'')+(reverse?' gradient':'')}));
-    }
+      if(isActive&&(!reverse||from!=='sample')){
+        const token=svg('circle',{r:reverse?4.5:4,fill:reverse?'#b64e45':'#007e70',class:'flow-token'});
+        token.append(svg('animateMotion',{path,dur:reverse?'1.7s':'1.9s',begin:(index%3)*-.42+'s',repeatCount:'indefinite',calcMode:'linear',keyPoints:reverse?'1;0':'0;1',keyTimes:'0;1'}));
+        graph.append(token);
+      }
+    });
     for(const n of nodes)graph.append(nodeShape(n,active.has(n.id)));
     const legend=svg('text',{x:25,y:450,class:'tiny'});
     legend.textContent=trainStep===6?'Red dashed: conceptual gradient paths to all three nets':'Green: active forward path in this training stage';
@@ -300,31 +312,68 @@
   }
   function setTrain(n){trainStep=Math.max(0,Math.min(6,n));renderTrain()}
   function trainStop(){if(trainTimer){clearInterval(trainTimer);trainTimer=null}el('trainPlay').textContent='▶';el('trainPlay').setAttribute('aria-label','Play training')}
-  function trainPlay(){if(trainTimer)return;el('trainPlay').textContent='Ⅱ';el('trainPlay').setAttribute('aria-label','Pause training');trainTimer=setInterval(()=>{if(trainStep===6){if(el('trainLoop').checked)setTrain(0);else trainStop()}else setTrain(trainStep+1)},1200)}
+  function trainPlay(){if(trainTimer)return;el('trainPlay').textContent='Ⅱ';el('trainPlay').setAttribute('aria-label','Pause training');trainTimer=setInterval(()=>{if(trainStep===6){if(el('trainLoop').checked)setTrain(0);else trainStop()}else setTrain(trainStep+1)},2000)}
   el('trainPlay').addEventListener('click',()=>trainTimer?trainStop():trainPlay());
   el('trainBack').addEventListener('click',()=>setTrain(trainStep-1));
   el('trainForward').addEventListener('click',()=>setTrain(trainStep+1));
   el('trainScrub').addEventListener('input',e=>setTrain(Number(e.target.value)));
   function ensureEquiv(){
     if(equivScene)return;
-    try{equivScene=new window.Riemann3D(el('equiv3d'),{comparison:true,hideDistractor:true});equivScene.setTask(currentTask);equivScene.setStep(8);equivScene.setMode('solid');applyEquiv()}
+    try{equivScene=new window.Riemann3D(el('equiv3d'),{comparison:true,hideDistractor:true});equivScene.setTask(currentTask);equivScene.setStep(8);equivScene.setMode('solid');setEqProgress(0)}
     catch(error){console.error(error);el('equivError').hidden=false}
+  }
+  let eqProgress=0,eqPlaying=false,eqFrame=0,eqStarted=0,eqLastFrame=0;
+  const eqReducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+  function setEqProgress(value){
+    eqProgress=Math.max(0,Math.min(1,value));
+    el('eqProgress').value=Math.round(eqProgress*100);
+    el('eqPhase').textContent=eqProgress<.04?'Original pose':eqProgress>.96?'Transformed pose':'Transform '+Math.round(eqProgress*100)+'%';
+    if(equivScene)equivScene.setTransform(Number(el('eqRot').value)*eqProgress,Number(el('eqPitch').value)*eqProgress,Number(el('eqMove').value)*eqProgress/100);
+  }
+  function stopEquiv(){
+    eqPlaying=false;cancelAnimationFrame(eqFrame);
+    el('eqPlay').textContent='▶';el('eqPlay').setAttribute('aria-label','Play local transformation');
+  }
+  function tickEquiv(now){
+    if(!eqPlaying)return;
+    if(now-eqLastFrame>40){
+      const cycle=((now-eqStarted)%5200)/5200;
+      const x=cycle<.5?cycle*2:(1-cycle)*2;
+      setEqProgress(x*x*(3-2*x));
+      eqLastFrame=now;
+    }
+    eqFrame=requestAnimationFrame(tickEquiv);
+  }
+  function playEquiv(){
+    if(eqPlaying)return;
+    eqPlaying=true;eqStarted=performance.now();eqLastFrame=0;
+    el('eqPlay').textContent='Ⅱ';el('eqPlay').setAttribute('aria-label','Pause local transformation');
+    eqFrame=requestAnimationFrame(tickEquiv);
   }
   function applyEquiv(){
     const a=Number(el('eqRot').value),b=Number(el('eqPitch').value),d=Number(el('eqMove').value);
     el('eqRotVal').textContent=a+'°';el('eqPitchVal').textContent=b+'°';el('eqMoveVal').textContent=d+' cm';
-    if(equivScene)equivScene.setTransform(a,b,d/100);
+    stopEquiv();setEqProgress(1);
   }
   for(const id of ['eqRot','eqPitch','eqMove'])el(id).addEventListener('input',applyEquiv);
+  el('eqProgress').addEventListener('input',event=>{stopEquiv();setEqProgress(Number(event.target.value)/100)});
+  el('eqPlay').addEventListener('click',()=>eqPlaying?stopEquiv():playEquiv());
   document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{
     document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',String(x===tab)));
     document.querySelectorAll('.view').forEach(x=>x.hidden=x.id!==tab.getAttribute('aria-controls'));
     if(tab.id!=='tab-inference')stop();
     if(tab.id!=='tab-training')trainStop();
-    if(tab.id==='tab-equivariance'){ensureEquiv();requestAnimationFrame(()=>equivScene&&equivScene.resize())}
-    if(tab.id==='tab-inference')requestAnimationFrame(()=>inferenceScene&&inferenceScene.resize());
+    if(tab.id!=='tab-equivariance')stopEquiv();
+    if(inferenceScene)inferenceScene.setActive(tab.id==='tab-inference');
+    if(equivScene)equivScene.setActive(tab.id==='tab-equivariance');
+    if(typeof el('networkGraph').pauseAnimations==='function'){
+      if(tab.id==='tab-training')el('networkGraph').unpauseAnimations();
+      else el('networkGraph').pauseAnimations();
+    }
+    if(tab.id==='tab-equivariance'){ensureEquiv();requestAnimationFrame(()=>equivScene&&equivScene.resize());if(!eqReducedMotion.matches)playEquiv()}
+    if(tab.id==='tab-inference'){requestAnimationFrame(()=>inferenceScene&&inferenceScene.resize());if(step===8)setStep(8)}
     if(tab.id==='tab-training')typeset(el('training'));
   }));
-  renderStep();renderTrain();selectNode('sample');applyEquiv();
+  renderStep();renderTrain();selectNode('sample');setEqProgress(0);
   typeset(el('equivariance'));
 })();
