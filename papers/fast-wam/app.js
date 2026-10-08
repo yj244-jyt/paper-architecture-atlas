@@ -277,8 +277,51 @@
     }
     return s;
   }
+  function trainingMobileDetail(stage,p){
+    let s=`<rect width="360" height="230" fill="#fbfcfb"/>`;
+    const title=["Recorded example","Future video is observed","Two noisy targets","Video Diffusion Transformer","Action Diffusion Transformer","Two velocity losses","Update model weights"][stage];
+    s+=txt(16,29,title,14,ink,800,"start");
+    s+=txt(16,46,"ILLUSTRATIVE · FIGURE 2 / EQS. 5–9",9,"#688079",700,"start");
+    if(stage===0||stage===1){
+      for(let k=0;k<3;k++){
+        const x=15+k*115,fold=k===0?0:stage===1?clamp(.17+k*.22+p*.15):k*.25;
+        s+=futureFrame(x,66,100,95,fold);
+        s+=txt(x+50,180,k===0?"current f₀":`later f${k}`,10,k===0?green:blue,750);
+        if(k<2)s+=arrow(x+102,113,x+113,113,blue,1.6);
+      }
+      if(stage===0){const x=22+p*84;s+=line(x,69,x,159,green,1.7,`stroke-dasharray="4 4"`)+dot(x,163,4,green);}
+      else s+=dot(26+p*307,202,6,green)+line(26,202,334,202,green,1,`opacity=".25"`);
+      s+=txt(180,222,stage===0?"Frames and actions come from a recording":"Later frames teach the video branch",10,"#526b67",700);
+    }else if(stage===3||stage===4){
+      const action=stage===4,c=action?amber:blue;
+      const labels=["clean f₀",action?"noisy actions":"noisy future","T5 text"];
+      for(let k=0;k<3;k++){
+        const x=12+k*114;
+        s+=rect(x,65,104,44,k===1?(action?"#fff1dc":"#e8f3f8"):"#edf5f1",k===1?c:green,4);
+        s+=txt(x+52,84,labels[k],10,k===1?c:green,800);
+        for(let j=0;j<5;j++)s+=dot(x+24+j*14,99,2.7,k===1?c:green,.35+.55*((j+Math.floor(p*5))%5)/5);
+      }
+      s+=line(180,111,180,130,c,2)+`<path d="M 175 124 L 180 131 L 185 124" fill="none" stroke="${c}" stroke-width="2"/>`;
+      s+=rect(49,135,262,60,"#fff",c,5,`stroke-width="2"`);
+      s+=txt(180,153,action?"Action expert DiT":"Video backbone DiT",11,c,800);
+      for(let k=0;k<4;k++)s+=rect(98+k*45,164,29,22,k===Math.floor(p*4)?(action?"#f5ca87":"#b9dbea"):"#e7f0ec",c,3);
+      s+=txt(180,219,action?"Reads f₀ + actions; future blocked":"Reads f₀ + future; predicts velocity",10,"#526b67",700);
+    }else{
+      for(let branch=0;branch<2;branch++){
+        const y=65+branch*73,c=branch?amber:blue;
+        s+=rect(14,y,332,61,branch?"#fff4e5":"#eaf5f9",c,4);
+        s+=txt(27,y+22,branch?"ACTION":"VIDEO",10,c,800,"start");
+        for(let k=0;k<8;k++)s+=dot(127+k*18,y+32+(stage===2?Math.sin(k*7+p*14)*6:Math.sin(k*4)*3),3,c);
+        s+=txt(326,y+36,stage===2?"yₜ":stage===5?"L":"∇",13,c,800);
+        if(stage===5)s+=pulseAlong(275,y+49,327,y+49,p,c,4);
+        if(stage===6)s+=pulseAlong(325,y+49,129,y+49,p,green,4);
+      }
+      s+=txt(180,222,stage===2?"yₜ = (1 − t)y + tε":stage===5?"L = L_act + λ L_vid":"Gradients flow to model weights",10,green,800);
+    }
+    return s;
+  }
   const train=setupSequence("train",trainStages,(i,p)=>{
-    const stage=trainStages[i];$("training-svg").innerHTML=trainingGraphic(i,p);$("training-detail-svg").innerHTML=trainingDetail(i,p);$("train-state").textContent=stage.name.toUpperCase();$("train-kicker").textContent=`Stage ${String(i+1).padStart(2,"0")}`;$("train-title").textContent=stage.title;$("train-copy").textContent=stage.copy;
+    const stage=trainStages[i];$("training-svg").innerHTML=trainingGraphic(i,p);$("training-detail-svg").innerHTML=trainingDetail(i,p);$("training-mobile-svg").innerHTML=trainingMobileDetail(i,p);$("train-state").textContent=stage.name.toUpperCase();$("train-kicker").textContent=`Stage ${String(i+1).padStart(2,"0")}`;$("train-title").textContent=stage.title;$("train-copy").textContent=stage.copy;
     const names=["Current observation + language","Later observed video frames","Noisy video and action targets","Video DiT: visual velocity","Action DiT: action velocity","Video and action losses","Update model weights"];
     if($("training-mobile").dataset.stage!==String(i)){
       $("training-mobile").innerHTML=names.map((n,j)=>`<div class="mobile-node ${i===j?"active":""} ${j===5?"loss":""}">${n}</div>${j<6?"<div class=mobile-arrow>↓</div>":""}`).join("");
