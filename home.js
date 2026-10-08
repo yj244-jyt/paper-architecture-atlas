@@ -49,7 +49,7 @@
     imageLink.setAttribute("aria-label", "Open " + paper.shortTitle + " visualization");
     const image = element("img");
     image.src = paper.preview;
-    image.alt = "3D teaching reconstruction for " + paper.shortTitle;
+    image.alt = "Teaching reconstruction for " + paper.shortTitle;
     image.loading = "eager";
     imageLink.append(image);
 

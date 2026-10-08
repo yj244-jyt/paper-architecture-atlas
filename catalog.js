@@ -1,5 +1,20 @@
 window.PAPER_CATALOG = [
   {
+    slug: "fast-wam",
+    title: "Fast-WAM: Do World Action Models Need Test-time Future Imagination?",
+    shortTitle: "Fast-WAM",
+    authors: "Tianyuan Yuan, Zibin Dong, Yicheng Liu, Hang Zhao",
+    venue: "arXiv 2026",
+    year: 2026,
+    added: "2026-10-08",
+    topics: ["Robot manipulation", "World models", "Action generation"],
+    summary: "See how future-video training shapes a world representation that generates actions without imagining video at test time.",
+    preview: "assets/fast-wam-scene.png?v=2",
+    path: "papers/fast-wam/",
+    paper: "https://arxiv.org/abs/2603.16666",
+    code: "https://github.com/yuantianyuan01/FastWAM"
+  },
+  {
     slug: "dp3",
     title: "3D Diffusion Policy: Generalizable Visuomotor Policy Learning via Simple 3D Representations",
     shortTitle: "3D Diffusion Policy",

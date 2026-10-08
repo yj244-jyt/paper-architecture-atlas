@@ -6,6 +6,7 @@ An independent collection of interactive, source-grounded research paper archite
 
 ## Current entries
 
+- [Fast-WAM](papers/fast-wam/): animated inference, joint video/action training, structured attention masks, controlled variants, and paper-reported results.
 - [RiEMann](papers/riemann/): full-scene RGB-D input, SE(3)-Transformer branches, training supervision, local equivariance, and illustrative robot actions.
 - [3D Diffusion Policy](papers/dp3/): single-view depth to point cloud, DP3 Encoder, conditional action diffusion, training objective, and reported results.
 
