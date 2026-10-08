@@ -24,7 +24,7 @@ window.PAPER_CATALOG = [
     added: "2026-10-08",
     topics: ["Robot manipulation", "Point clouds", "Diffusion policy"],
     summary: "Inspect a single-view point cloud as it becomes a 64-D feature, conditions a diffusion policy, and produces a short action sequence.",
-    preview: "assets/dp3-scene.png?v=86a3bb2",
+    preview: "assets/dp3-scene.png?v=58be2a0",
     path: "papers/dp3/",
     paper: "https://arxiv.org/abs/2403.03954",
     code: "https://github.com/YanjieZe/3D-Diffusion-Policy"

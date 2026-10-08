@@ -15,11 +15,13 @@
     {name:"Act", title:"Execute and observe again", copy:"A controller uses the predicted action chunk, then new observations can start another control cycle. The cloth and gripper motion is a teaching reconstruction, not measured policy behavior.", repr:"Robot actions from predicted chunk", source:"Sections 3.1 and 4.2; Figure 3"}
   ];
   const trainStages = [
-    {name:"Examples", title:"Provide present, future, and actions", copy:"Training examples include the current image, future frames, a language instruction, and the demonstrated action chunk. Future frames are available here because they are supervision, not predictions at test time."},
-    {name:"Corrupt", title:"Interpolate both targets with noise", copy:"The VAE encodes future frames as latent targets. Independently sampled Gaussian noise and a flow time t form noisy future-video and action tokens using Equation 5."},
-    {name:"Forward", title:"Run two branches around one anchor", copy:"The video DiT predicts a velocity for future-video latents; the action DiT predicts a velocity for actions. Both can read clean current-frame tokens and language, while action tokens cannot read future-video tokens."},
-    {name:"Loss", title:"Measure two velocity errors", copy:"Each branch compares its predicted velocity with ε − y. The objective sums the action loss and λ times the video loss. The shown vectors are explanatory, not trained outputs."},
-    {name:"Update", title:"Let video supervision shape the backbone", copy:"Gradients from video modeling update the visual world-model branch; action supervision updates the action path and shared visual context. Raw observations and ground-truth targets receive no parameter updates."}
+    {name:"Examples", title:"Start with a recorded interaction", copy:"One training example supplies the instruction, current image, later observed frames, and demonstrated actions. The illustrated towel sequence is a teaching example, not a frame sequence from the paper."},
+    {name:"Future video", title:"See what “future video” means", copy:"Later observed frames show how the scene changes after the current frame. The pretrained video VAE encodes these frames as future latent targets. They teach the model during training; Fast-WAM does not generate them at inference."},
+    {name:"Add noise", title:"Create two noisy learning problems", copy:"For each target, a sampled flow time t interpolates between clean target y and Gaussian noise ε: yₜ = (1 − t)y + tε. Video latents and action chunks have separate noisy tokens."},
+    {name:"Video DiT", title:"Video DiT learns visual change", copy:"DiT means Diffusion Transformer. The pretrained Wan2.2 video backbone processes clean current-frame anchor tokens and noisy future-video tokens. Allowed tokens exchange information through self-attention; T5 language enters through cross-attention. Its video head predicts a velocity for future latents."},
+    {name:"Action DiT", title:"Action DiT learns the action flow", copy:"The action expert is a second Diffusion Transformer with a smaller hidden width. It processes noisy action tokens, reading the clean frame and other action tokens through self-attention and language through cross-attention. The mask blocks future-video tokens. At inference, this expert refines actions over 10 flow steps."},
+    {name:"Losses", title:"Compare two predicted velocities", copy:"Video and action branches each compare their predicted velocity with ε − y. The joint objective is L = L_act + λL_vid; λ weights the video supervision. Animated vectors are illustrative, not measured model outputs."},
+    {name:"Update", title:"Update the model, then discard future tokens", copy:"Both losses backpropagate into the trainable model paths and shared visual representation. Recorded images and target actions are data, not updated parameters. At inference, future-video tokens and their denoising are omitted entirely."}
   ];
 
   function initTabs() {
@@ -147,38 +149,139 @@
     const stage=inferStages[i];$("scene").innerHTML=clothScene(i,p);$("scene-heading").textContent=stage.title;$("stage-number").textContent=`Step ${String(i+1).padStart(2,"0")}`;$("stage-title").textContent=stage.title;$("stage-copy").textContent=stage.copy;$("stage-repr").textContent=stage.repr;$("stage-source").textContent="Paper source: "+stage.source;
   });
 
-  const trainNodes=[
-    {x:60,y:50,w:160,h:62,title:"Instruction",sub:"T5 text encoder",color:green},
-    {x:60,y:192,w:160,h:62,title:"Current frame",sub:"VAE → clean f₀",color:blue},
-    {x:60,y:350,w:160,h:62,title:"Future frames",sub:"VAE → noisy f₁:T",color:blue},
-    {x:316,y:350,w:150,h:62,title:"Action chunk",sub:"Noisy a₁:H",color:amber},
-    {x:360,y:159,w:210,h:82,title:"Video DiT",sub:"shared visual anchor",color:blue},
-    {x:645,y:159,w:210,h:82,title:"Action DiT",sub:"action expert",color:amber},
-    {x:700,y:350,w:145,h:62,title:"Action loss",sub:"L act",color:amber},
-    {x:504,y:350,w:145,h:62,title:"Video loss",sub:"λ L vid",color:blue}
-  ];
+  function futureFrame(x,y,w,h,fold){
+    const left=x+11+fold*w*.16, right=x+w-11-fold*w*.16;
+    const back=y+h*.49, front=y+h*.82-fold*h*.24;
+    let s=rect(x,y,w,h,"#e7eeeb","#abc4ba",4);
+    s+=`<path d="M ${x+4} ${y+h*.84} L ${x+w-4} ${y+h*.84}" stroke="#bfd1c9" stroke-width="2"/>`;
+    s+=`<path d="M ${left} ${back} Q ${x+w/2} ${back-5-fold*9} ${right} ${back} L ${right-2} ${front} Q ${x+w/2} ${front+5} ${left+2} ${front} Z" fill="#3285a2" stroke="#175b77" stroke-width="2"/>`;
+    s+=`<path d="M ${left+3} ${back+5} Q ${x+w/2} ${back-2-fold*7} ${right-3} ${back+5}" fill="none" stroke="#a8d8de" stroke-width="2"/>`;
+    s+=dot(left+2,back-5,3,"#394e55")+dot(right-2,back-5,3,"#394e55");
+    return s;
+  }
   function trainingGraphic(stage,p){
-    let s=`<rect width="1060" height="500" fill="#f9fbfa"/>`;
-    s+=txt(20,27,"TRAINING GRAPH",11,"#60807b",800,"start");
-    const edges=[[0,4,green],[0,5,green],[1,4,blue],[1,5,blue],[2,4,blue],[3,5,amber],[4,7,blue],[5,6,amber]];
-    for(const [a,b,c] of edges){const A=trainNodes[a],B=trainNodes[b];let x1=A.x+A.w/2,y1=A.y+A.h/2,x2=B.x+B.w/2,y2=B.y+B.h/2;if(a===0){x1=A.x+A.w;y1=A.y+30;x2=B.x+B.w/2;y2=B.y;}if(b===7||b===6){x1=A.x+A.w/2;y1=A.y+A.h;x2=B.x+B.w/2;y2=B.y;}
-      const op=(stage===0?.3:stage===1?.5:1);s+=line(x1,y1,x2,y2,c,2,`opacity="${op}"`);if(stage>=2&&stage<=3)s+=pulseAlong(x1,y1,x2,y2,(p+(a+b)*.11)%1,c,5);
-      if(stage===4&&(b===7||b===6))s+=pulseAlong(x2,y2,x1,y1,p,green,6);
+    let s=`<rect width="1180" height="565" fill="#f7faf8"/>`;
+    s+=rect(24,20,1132,102,"#edf4ef","#ccded4",6);
+    s+=txt(43,44,"SHARED CONDITION  ·  AVAILABLE TO BOTH BRANCHES",11,green,800,"start");
+    s+=rect(43,58,212,46,"#fff","#a9c9bd",4)+txt(149,78,"Instruction l",13,green,800)+txt(149,95,"T5 language embeddings",10,"#52696a",600);
+    s+=rect(273,58,232,46,"#fff","#a9c9bd",4)+txt(389,78,"Current observation o",13,blue,800)+txt(389,95,"VAE → clean frame f₀",10,"#52696a",600);
+    s+=txt(530,78,"The clean f₀ anchor cannot read future or action tokens",13,ink,650,"start");
+    s+=txt(530,98,"Language reaches each token group through cross-attention",11,"#55736e",600,"start");
+    const lanes=[{y:139,color:blue,tint:"#e9f3f8",label:"FUTURE VIDEO · TRAINING ONLY",input:"Recorded later frames",noisy:"Noisy future latents",model:"Video DiT",out:"Video velocity + loss",active:[0,1,2,3,5,6].includes(stage)},
+      {y:344,color:amber,tint:"#fff2df",label:"DEMONSTRATED ACTIONS",input:"Recorded action chunk",noisy:"Noisy action tokens",model:"Action DiT",out:"Action velocity + loss",active:[0,2,4,5,6].includes(stage)}];
+    for(const [laneIndex,l] of lanes.entries()){
+      const y=l.y, cy=y+108, hi=l.active;
+      s+=rect(24,y,1132,184,hi?l.tint:"#f3f6f4",hi?l.color:"#d4dfda",6,`opacity="${hi?1:.72}"`);
+      s+=txt(43,y+26,l.label,11,l.color,800,"start");
+      const boxes=[[43,207],[287,202],[526,326],[890,246]];
+      for(const [j,[x,w]] of boxes.entries()){
+        const fill=j===2?(laneIndex?"#fff7eb":"#f1f8fb"):"#fff";
+        s+=rect(x,y+45,w,108,fill,hi?l.color:"#b7cbc3",5,`stroke-width="${(stage===3&&laneIndex===0&&j===2)||(stage===4&&laneIndex===1&&j===2)?3:1.5}"`);
+      }
+      s+=txt(147,y+68,l.input,13,ink,750)+txt(388,y+68,l.noisy,13,ink,750);
+      s+=txt(689,y+69,l.model,18,l.color,850)+txt(1013,y+70,l.out,13,ink,750);
+      s+=txt(388,y+135,"yₜ = (1 − t)y + tε",11,"#58706b",700);
+      s+=txt(689,y+132,laneIndex?"a₁:H reads f₀ + actions + text":"f₁:T reads f₀ + future + text",11,"#52696a",700);
+      s+=txt(1013,y+116,laneIndex?"L_act":"λ L_vid",17,l.color,800);
+      for(const [a,b] of [[250,287],[489,526],[852,890]]){
+        s+=arrow(a,cy,b-3,cy,l.color,2);
+        if((stage===1&&laneIndex===0)||(stage===2)||(stage===3&&laneIndex===0)||(stage===4&&laneIndex===1)||(stage===5))s+=pulseAlong(a+5,cy,b-7,cy,(p*1.4)%1,l.color,4);
+      }
+      if(laneIndex===0){for(let k=0;k<3;k++)s+=futureFrame(55+k*60,y+83,53,53,(k+p*.6)/3);}
+      else for(let k=0;k<7;k++)s+=dot(70+k*24,y+112+Math.sin(k*.7+p*3)*8,4,amber);
+      for(let k=0;k<12;k++){
+        const x=311+(k%6)*25, yy=y+87+Math.floor(k/6)*17;
+        s+=dot(x+Math.sin(k*7+p*12)*(stage===2?5:1),yy,3.4,l.color,.45+.45*((k%4)/4));
+      }
+      for(let k=0;k<3;k++){
+        const x=557+k*94;
+        s+=rect(x,y+84,69,26,k===1?l.tint:"#fff",l.color,3);
+        s+=txt(x+34,y+102,k===0?"f₀":k===1?(laneIndex?"a₁:H":"f₁:T"):"text",10,l.color,800);
+        if(stage===(laneIndex?4:3))s+=dot(x+34+(p-.5)*22,y+115,3,l.color);
+      }
+      if(stage===6){
+        s+=`<path d="M 1118 ${y+164} H 627" fill="none" stroke="${green}" stroke-width="2.5" stroke-dasharray="7 5"/>`;
+        s+=pulseAlong(1110,y+164,635,y+164,p,green,5);
+      }
     }
-    s+=line(570,200,645,200,"#aabbb7",2,`stroke-dasharray="6 5"`)+txt(608,189,"shared attention",10,"#637a79",700);
-    for(let i=0;i<trainNodes.length;i++){const n=trainNodes[i];const live=(stage===0&&i<4)||(stage===1&&(i===2||i===3))||(stage===2&&(i===4||i===5))||(stage===3&&(i===6||i===7))||(stage===4&&(i===4||i===5||i===6||i===7));const fill=live?(n.color===amber?"#fff0d7":n.color===blue?"#e3f0f6":"#e0f2eb"):"#fff";s+=rect(n.x,n.y,n.w,n.h,fill,live?n.color:"#b8cbc5",6,`stroke-width="${live?2.5:1}"`)+txt(n.x+n.w/2,n.y+26,n.title,15,live?n.color:ink,800)+txt(n.x+n.w/2,n.y+47,n.sub,11,"#52696a",600);}
-    if(stage===0){for(let i=0;i<4;i++){const n=trainNodes[i],x=n.x+n.w+21+25*((p+i*.21)%1),y=n.y+n.h/2;s+=dot(x,y,5,n.color,.75);}}
-    if(stage===1){for(let i=0;i<7;i++){s+=dot(225+i*15,385+Math.sin(i*7+p*10)*13,3.5,blue);s+=dot(470+i*14,389+Math.sin(i*8+p*10)*12,3.5,amber);}}
-    if(stage===3){s+=txt(763,453,"L = L act + λ L vid",16,green,800);}
-    if(stage===4){s+=`<path d="M 760 419 Q 400 470 441 247" fill="none" stroke="${green}" stroke-width="3" stroke-dasharray="7 6"/>${pulseAlong(760,419,441,247,p,green,6)}`;s+=txt(384,453,"gradient to model weights",12,green,800);}
-    s+=txt(890,69,"ACTION CANNOT READ",11,"#966c3c",800)+txt(890,86,"FUTURE-VIDEO TOKENS",11,"#966c3c",800);
+    s+=txt(590,542,"STRUCTURED MASK: action tokens never read future-video tokens",12,"#81603a",800);
+    return s;
+  }
+  function trainingDetail(stage,p){
+    let s=`<rect width="1180" height="350" fill="#fbfcfb"/>`;
+    const heading=["A recorded training example","Future frames are observed targets","Two independent noisy targets","Inside the Video DiT","Inside the Action DiT","Two flow-matching errors","Gradients update the model"][stage];
+    s+=txt(34,35,heading,18,ink,800,"start");
+    s+=txt(34,57,"ILLUSTRATIVE REPRESENTATIONS · NOT CAPTURED ACTIVATIONS",10,"#6b827c",750,"start");
+    if(stage===0||stage===1){
+      s+=txt(36,100,"CURRENT f₀",11,green,800,"start");
+      s+=txt(328,100,"LATER OBSERVED FRAMES f₁:T",11,blue,800,"start");
+      s+=futureFrame(36,116,240,162,0);
+      s+=arrow(282,198,310,198,green,2);
+      if(stage===0){const scan=49+p*210;s+=line(scan,118,scan,276,green,2,`stroke-dasharray="5 5"`)+dot(scan,282,5,green);}
+      for(let k=0;k<3;k++){
+        const fold=stage===1?clamp(.13+k*.25+p*.17):(.18+k*.28);
+        s+=futureFrame(328+k*273,116,235,162,fold);
+        s+=txt(445+k*273,300,`observed t+${k+1}`,12,blue,700);
+        if(k<2)s+=arrow(563+k*273,198,594+k*273,198,blue,2);
+      }
+      if(stage===1){const x=328+p*805;s+=line(x,117,x,280,green,2,`stroke-dasharray="5 4"`)+dot(x,285,6,green);}
+      else s+=txt(40,319,"The action chunk is recorded alongside the video, not inferred from these later frames.",12,"#59716d",600,"start");
+    }else if(stage===3||stage===4){
+      const isAction=stage===4, c=isAction?amber:blue, baseY=110;
+      const groups=isAction?["clean f₀ anchor","noisy action a₁:H","language l"]:["clean f₀ anchor","noisy future f₁:T","language l"];
+      for(let k=0;k<3;k++){
+        const x=36+k*190;
+        s+=rect(x,baseY,170,62,k===1?(isAction?"#fff1dc":"#e8f3f8"):"#edf5f1",k===1?c:green,5);
+        s+=txt(x+85,baseY+26,groups[k],12,k===1?c:green,750);
+        for(let j=0;j<6;j++)s+=dot(x+46+j*16,baseY+45,3,k===1?c:green,.35+.5*((j+Math.floor(p*6))%6)/6);
+      }
+      s+=arrow(610,142,692,142,c,3);
+      s+=rect(699,87,205,119,"#fff",c,6,`stroke-width="2.5"`);
+      s+=txt(801,116,isAction?"Action expert DiT":"Video backbone DiT",15,c,800);
+      for(let k=0;k<4;k++){
+        s+=rect(724+k*42,136,29,42,k===Math.floor(p*4)?(isAction?"#fbd79d":"#b9dbea"):"#e6efec",c,3);
+        s+=dot(738+k*42,157,4,c);
+      }
+      s+=txt(801,197,"repeated blocks · schematic",10,"#5d7570",650);
+      s+=arrow(907,142,977,142,c,3);
+      s+=rect(984,105,155,74,isAction?"#fff2e0":"#e9f3f8",c,5);
+      s+=txt(1061,135,"predicted velocity",12,c,750)+txt(1061,156,isAction?"for actions":"for future latents",11,c,600);
+      s+=txt(36,240,"SELF-ATTENTION READS",11,c,800,"start");
+      s+=rect(36,255,535,55,"#f4f8f6","#c7d8d0",4);
+      s+=txt(54,277,isAction?"Action query → clean f₀ + action tokens":"Future query → clean f₀ + future-video tokens",14,ink,750,"start");
+      s+=txt(54,297,"Text is available through cross-attention in both branches.",11,"#58716d",600,"start");
+      s+=rect(699,235,440,76,isAction?"#fff5e9":"#edf6fa",c,4);
+      s+=txt(720,262,isAction?"FUTURE VIDEO IS BLOCKED":"FUTURE VIDEO IS PRESENT",12,c,800,"start");
+      s+=txt(720,286,isAction?"No path from f₁:T into action queries":"These tokens are removed at inference",12,"#52696a",650,"start");
+      s+=txt(720,332,isAction?"Action expert: ~1B parameters, hidden width 1024":"Video backbone: pretrained Wan2.2-5B",12,"#58716d",650,"start");
+      if(isAction)s+=`<path d="M 612 213 L 654 255 M 654 213 L 612 255" stroke="${amber}" stroke-width="4"/>`;
+    }else{
+      const colors=[blue,amber];
+      for(let branch=0;branch<2;branch++){
+        const y=102+branch*103,c=colors[branch],label=branch?"ACTION CHUNK":"FUTURE LATENTS";
+        s+=rect(36,y,1102,80,branch?"#fff5e6":"#ebf5f9",c,5);
+        s+=txt(55,y+26,label,12,c,800,"start");
+        for(let k=0;k<18;k++){
+          const x=249+k*29, jitter=stage===2?Math.sin(k*8+p*18)*12*(.25+p*.75):Math.sin(k*3)*6;
+          s+=dot(x,y+42+jitter,4,c,.65);
+        }
+        if(stage===2)s+=txt(800,y+49,"clean y  →  yₜ  →  noise ε",13,c,750,"start");
+        else if(stage===5)s+=txt(800,y+49,branch?"L_act = ‖v̂ − (ε − a)‖²":"L_vid = ‖v̂ − (ε − z)‖²",13,c,750,"start");
+        else s+=txt(800,y+49,"loss gradient → model weights",13,c,750,"start");
+        if(stage===5)s+=pulseAlong(730,y+66,1090,y+66,p,c,5);
+        if(stage===6)s+=pulseAlong(1120,y+66,675,y+66,p,green,6);
+      }
+      if(stage===5)s+=txt(587,329,"TOTAL OBJECTIVE  L = L_act + λ L_vid",15,green,800);
+      if(stage===2)s+=txt(587,329,"yₜ = (1 − t)y + tε   ·   each branch gets its own target",13,green,800);
+      if(stage===6)s+=txt(587,329,"At test time: keep f₀ + action tokens; omit future-video tokens",13,green,800);
+    }
     return s;
   }
   const train=setupSequence("train",trainStages,(i,p)=>{
-    const stage=trainStages[i];$("training-svg").innerHTML=trainingGraphic(i,p);$("train-state").textContent=stage.name.toUpperCase();$("train-kicker").textContent=`Stage ${String(i+1).padStart(2,"0")}`;$("train-title").textContent=stage.title;$("train-copy").textContent=stage.copy;
-    const names=["Instruction + current image","Future latents + action demonstration","Video DiT + action DiT","Video loss + action loss","Backpropagate to model weights"];
+    const stage=trainStages[i];$("training-svg").innerHTML=trainingGraphic(i,p);$("training-detail-svg").innerHTML=trainingDetail(i,p);$("train-state").textContent=stage.name.toUpperCase();$("train-kicker").textContent=`Stage ${String(i+1).padStart(2,"0")}`;$("train-title").textContent=stage.title;$("train-copy").textContent=stage.copy;
+    const names=["Current observation + language","Later observed video frames","Noisy video and action targets","Video DiT: visual velocity","Action DiT: action velocity","Video and action losses","Update model weights"];
     if($("training-mobile").dataset.stage!==String(i)){
-      $("training-mobile").innerHTML=names.map((n,j)=>`<div class="mobile-node ${i===j?"active":""} ${j===3?"loss":""}">${n}</div>${j<4?"<div class=mobile-arrow>↓</div>":""}`).join("");
+      $("training-mobile").innerHTML=names.map((n,j)=>`<div class="mobile-node ${i===j?"active":""} ${j===5?"loss":""}">${n}</div>${j<6?"<div class=mobile-arrow>↓</div>":""}`).join("");
       $("training-mobile").dataset.stage=String(i);
     }
   });
