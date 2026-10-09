@@ -121,6 +121,16 @@ nav a:hover{color:var(--teal)}
 .training-flow span{font-size:11px;color:var(--muted)}
 .diagram-note{font-size:11px;color:var(--muted);margin:13px 0 0}
 .static-link{display:flex;gap:18px;margin-top:7px;font-size:11px}
+.ablation-band{border-top:1px solid var(--line);background:#f0f5f2}
+.ablation-band .content{padding:36px 24px 40px}
+.ablation-head,.ablation-row{display:grid;grid-template-columns:125px minmax(0,1.1fr) minmax(0,1fr);gap:22px;align-items:start}
+.ablation-head{padding:0 12px 7px;color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase}
+.ablation-row{padding:15px 12px;border-top:1px solid var(--line)}
+.ablation-row strong{color:var(--blue);font-size:14px;white-space:nowrap}
+.ablation-row.primary-contrast strong{color:var(--teal)}
+.ablation-row p{margin:0;color:#40585c;font-size:12px;line-height:1.6}
+.ablation-footnote{border-top:1px solid var(--line);padding:14px 12px 0;margin:0;color:var(--muted);font-size:11px;line-height:1.65}
+.ablation-footnote strong{color:var(--ink)}
 .hypotheses-band{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .hypotheses-band .content{padding:36px 24px 42px}
 .work-pattern{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:11px 0;margin:21px 0 25px}
@@ -129,7 +139,7 @@ nav a:hover{color:var(--teal)}
 .work-row b{font-size:13px}
 .work-row small{font-size:11px;color:var(--muted)}
 .work-slots{display:flex;gap:5px}
-.work-slots span{min-width:0;flex:1;text-align:center;padding:8px 3px;border-radius:3px;font-size:10px;font-weight:700;white-space:nowrap}
+.work-slots span{min-width:0;min-height:36px;flex:1;display:grid;place-items:center;text-align:center;padding:6px 3px;border-radius:3px;font-size:10px;font-weight:700;line-height:1.2}
 .edge-slot{background:var(--amber-soft);color:#804b12}
 .linear-slot{background:var(--teal-soft);color:#006e60}
 .hypothesis-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px}
@@ -163,6 +173,6 @@ code{font:12px ui-monospace,SFMono-Regular,Consolas,monospace;background:#eaf0ec
 footer{background:#fff;border-top:1px solid var(--line)}
 .footer-inner{padding:17px 24px;display:flex;justify-content:space-between;gap:15px;font-size:11px;color:var(--muted)}
 @media(max-width:980px){.pipeline{overflow-x:auto;padding-bottom:5px}.pipe-segment{flex:0 0 132px}.model-grid{gap:9px}.model-card{padding:13px}.work-row{grid-template-columns:38px minmax(0,1fr)}.work-row small{grid-column:2;margin-top:-7px;margin-bottom:5px}}
-@media(max-width:760px){.header-inner{padding:12px 15px;align-items:start;flex-direction:column;gap:8px}nav{gap:14px}.intro-inner{padding:25px 15px}.intro h1{font-size:28px}.comparison,.hypotheses-band .content,.report{padding:28px 15px}.section-heading{display:block}.section-heading p{max-width:none;margin-top:10px}.scene-grid{grid-template-columns:1fr}#scene{aspect-ratio:500/250}.stage-detail{min-height:195px}.robot-heading{display:block}.task-buttons{margin-top:12px}#robot-scene{height:300px}.model-grid{grid-template-columns:1fr}.model-sub,.model-caution,.model-equation{min-height:0}.hypothesis-grid,.training-flow{grid-template-columns:1fr;gap:15px}.report-lead,.report-sections{grid-template-columns:1fr;gap:4px}.report-footer{display:block}.footer-inner{display:block;padding:15px}.footer-inner a{display:block;margin-top:6px}}
+@media(max-width:760px){.header-inner{padding:12px 15px;align-items:start;flex-direction:column;gap:8px}nav{gap:14px}.intro-inner{padding:25px 15px}.intro h1{font-size:28px}.comparison,.ablation-band .content,.hypotheses-band .content,.report{padding:28px 15px}.section-heading{display:block}.section-heading p{max-width:none;margin-top:10px}.scene-grid{grid-template-columns:1fr}#scene{aspect-ratio:500/250}.stage-detail{min-height:195px}.robot-heading{display:block}.task-buttons{margin-top:12px}#robot-scene{height:300px}.model-grid{grid-template-columns:1fr}.model-sub,.model-caution,.model-equation{min-height:0}.ablation-head{display:none}.ablation-row{grid-template-columns:1fr;gap:6px;padding:15px 0}.ablation-row p+p{color:var(--muted)}.ablation-footnote{padding-left:0;padding-right:0}.hypothesis-grid,.training-flow{grid-template-columns:1fr;gap:15px}.report-lead,.report-sections{grid-template-columns:1fr;gap:4px}.report-footer{display:block}.footer-inner{display:block;padding:15px}.footer-inner a{display:block;margin-top:6px}}
 @media(max-width:440px){.intro h1{font-size:25px}.stage-buttons{width:100%}.stage-buttons button{flex:1;min-width:42px;padding:0 5px}.playback{width:100%;flex-wrap:wrap}.playback input[type=range]{flex:1;min-width:70px}.scene-top,.scene-bottom{padding:8px 10px}.results-head{display:block}.pending-mark{display:inline-block;margin-top:10px}.work-slots span{font-size:9px;padding:8px 1px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.operator,.pipe-segment{transition:none}}

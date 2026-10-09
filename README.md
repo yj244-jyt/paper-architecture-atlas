@@ -14,7 +14,7 @@ Each visualization cites its primary paper. Procedural geometry, feature values,
 
 ## Independent experiments
 
-- [RiEMann backbone comparison](experiments/riemann-backbone-comparison/): an animated, English-language research report for the planned B0/M1/M2 controlled study. It is separate from the published-paper library. Expected speedups are hypotheses, not measured results.
+- [RiEMann backbone comparison](experiments/riemann-backbone-comparison/): an animated, English-language research report for the planned B0/M1/M2 study. M1 is a proposed mechanism control sharing M2's initial lift; their matched contrast tests the value and cost of per-layer edge-conditioned K/V. It is separate from the published-paper library. Expected speedups are hypotheses, not measured results.
 
 The RiEMann paper explainer and backbone experiment use one shared procedural 3D scene implementation at `shared/riemann-scene3d.js`; the table and robot are not redrawn for the experiment. The scene still uses the RiEMann page's bundled Three.js r128 (MIT).
 

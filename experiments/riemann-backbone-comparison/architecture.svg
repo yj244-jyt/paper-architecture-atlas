@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 690" width="1200" height="690" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 795" width="1200" height="795" role="img" aria-labelledby="title desc">
   <title id="title">RiEMann B0 M1 M2 backbone comparison</title>
-  <desc id="desc">Three columns share full-scene input, policy interfaces, and pose construction. B0 uses SE(3)-Transformer layers, M1 uses a relative-edge message in each layer, and M2 lifts relative-edge geometry once before equivariant Q K V attention layers.</desc>
+  <desc id="desc">Three columns share input and policy outputs. B0 uses official SE(3)-Transformer attention with per-layer edge K/V. M1 and M2 share an initial relative-edge lift; M1 continues edge-conditioned K/V every layer and M2 uses nodewise equivariant linear K/V. The bottom strip maps the three comparisons to their experimental purposes.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#617d82"/></marker>
     <marker id="blue-arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#315d91"/></marker>
@@ -8,48 +8,64 @@
     <marker id="teal-arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#007f70"/></marker>
   </defs>
   <style>text{font-family:Helvetica,Arial,sans-serif}.title{font-size:26px;font-weight:700;fill:#17262c}.sub{font-size:13px;fill:#546a6f}.head{font-size:22px;font-weight:700}.label{font-size:13px;font-weight:700;fill:#17262c}.minor{font-size:12px;fill:#546a6f}.code{font-size:12px;font-weight:700;fill:#17262c}</style>
-  <rect width="1200" height="690" fill="#ffffff"/>
+  <rect width="1200" height="795" fill="#ffffff"/>
   <text x="42" y="49" class="title">RiEMann: three backbones, one controlled policy</text>
-  <text x="42" y="74" class="sub">Architecture proposal | B0 is the official baseline; M1 and M2 are untrained candidates</text>
+  <text x="42" y="74" class="sub">B0 is the official baseline; M1 and M2 are proposed matched variants, not trained results</text>
   <rect x="40" y="102" width="1120" height="56" rx="5" fill="#f0f5f2" stroke="#c7d8d1"/>
   <text x="600" y="125" class="label" text-anchor="middle">COMMON INPUT</text>
   <text x="600" y="145" class="minor" text-anchor="middle">Full-scene XYZ + RGB; the same branch-specific radius graphs and ROI protocol</text>
-  <path d="M208 158 V193 M600 158 V193 M992 158 V193" fill="none" stroke="#617d82" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M208 158 V193" fill="none" stroke="#617d82" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M600 158 V193" fill="none" stroke="#617d82" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M992 158 V193" fill="none" stroke="#617d82" stroke-width="2" marker-end="url(#arrow)"/>
 
   <rect x="40" y="198" width="340" height="363" rx="6" fill="#f7f9fc" stroke="#b8cde1"/>
   <rect x="430" y="198" width="340" height="363" rx="6" fill="#fffaf2" stroke="#e2c9a7"/>
   <rect x="820" y="198" width="340" height="363" rx="6" fill="#f2f9f5" stroke="#b7d8cb"/>
   <text x="60" y="231" class="head" fill="#315d91">B0</text><text x="105" y="229" class="label">Official RiEMann</text>
-  <text x="450" y="231" class="head" fill="#a35d16">M1</text><text x="495" y="229" class="label">Layerwise relative-edge</text>
-  <text x="840" y="231" class="head" fill="#007f70">M2</text><text x="885" y="229" class="label">One lift + Q/K/V</text>
-  <text x="60" y="255" class="minor">SE(3)-Transformer backbone</text>
-  <text x="450" y="255" class="minor">Steerable edge message each layer</text>
-  <text x="840" y="255" class="minor">Geometry lift once; local attention later</text>
+  <text x="450" y="231" class="head" fill="#a35d16">M1</text><text x="495" y="229" class="label">Shared lift + edge K/V</text>
+  <text x="840" y="231" class="head" fill="#007f70">M2</text><text x="885" y="229" class="label">Shared lift + linear K/V</text>
+  <text x="60" y="255" class="minor">Official edge K/V inside each attention block</text>
+  <text x="450" y="255" class="minor">Same initial lift as M2; edge K/V later</text>
+  <text x="840" y="255" class="minor">Same initial lift as M1; linear K/V later</text>
 
   <rect x="72" y="278" width="272" height="43" rx="4" fill="#e9f0f9" stroke="#a9c5df"/><text x="208" y="304" text-anchor="middle" class="label">SE(3) layer 1</text>
   <rect x="72" y="342" width="272" height="43" rx="4" fill="#e9f0f9" stroke="#a9c5df"/><text x="208" y="368" text-anchor="middle" class="label">SE(3) layer 2</text>
   <rect x="72" y="406" width="272" height="43" rx="4" fill="#e9f0f9" stroke="#a9c5df"/><text x="208" y="432" text-anchor="middle" class="label">SE(3) layer 3</text>
   <rect x="72" y="470" width="272" height="43" rx="4" fill="#e9f0f9" stroke="#a9c5df"/><text x="208" y="496" text-anchor="middle" class="label">SE(3) layer 4</text>
-  <path d="M208 321 V336 M208 385 V400 M208 449 V464" fill="none" stroke="#315d91" stroke-width="2" marker-end="url(#blue-arrow)"/>
+  <path d="M208 321 V336" fill="none" stroke="#315d91" stroke-width="2" marker-end="url(#blue-arrow)"/>
+  <path d="M208 385 V400" fill="none" stroke="#315d91" stroke-width="2" marker-end="url(#blue-arrow)"/>
+  <path d="M208 449 V464" fill="none" stroke="#315d91" stroke-width="2" marker-end="url(#blue-arrow)"/>
 
-  <rect x="462" y="278" width="272" height="43" rx="4" fill="#fff1dc" stroke="#d6b477"/><text x="598" y="304" text-anchor="middle" class="label">Edge message + attention 1</text>
-  <rect x="462" y="342" width="272" height="43" rx="4" fill="#fff1dc" stroke="#d6b477"/><text x="598" y="368" text-anchor="middle" class="label">Edge message + attention 2</text>
-  <rect x="462" y="406" width="272" height="43" rx="4" fill="#fff1dc" stroke="#d6b477"/><text x="598" y="432" text-anchor="middle" class="label">Edge message + attention 3</text>
-  <rect x="462" y="470" width="272" height="43" rx="4" fill="#fff1dc" stroke="#d6b477"/><text x="598" y="496" text-anchor="middle" class="label">Edge message + attention 4</text>
-  <path d="M598 321 V336 M598 385 V400 M598 449 V464" fill="none" stroke="#a35d16" stroke-width="2" marker-end="url(#amber-arrow)"/>
+  <rect x="462" y="278" width="272" height="36" rx="4" fill="#fff1dc" stroke="#d6b477"/><text x="598" y="301" text-anchor="middle" class="label">Shared relative-edge lift</text>
+  <rect x="462" y="326" width="272" height="39" rx="4" fill="#fff1dc" stroke="#d6b477"/><text x="598" y="350" text-anchor="middle" class="label">Edge K/V + attention 1</text>
+  <rect x="462" y="377" width="272" height="39" rx="4" fill="#fff1dc" stroke="#d6b477"/><text x="598" y="401" text-anchor="middle" class="label">Edge K/V + attention 2</text>
+  <rect x="462" y="428" width="272" height="39" rx="4" fill="#fff1dc" stroke="#d6b477"/><text x="598" y="452" text-anchor="middle" class="label">Edge K/V + attention 3</text>
+  <rect x="462" y="479" width="272" height="39" rx="4" fill="#fff1dc" stroke="#d6b477"/><text x="598" y="503" text-anchor="middle" class="label">Edge K/V + attention 4</text>
+  <path d="M598 314 V320 M598 365 V371 M598 416 V422 M598 467 V473" fill="none" stroke="#a35d16" stroke-width="2"/>
 
-  <rect x="852" y="278" width="272" height="36" rx="4" fill="#fff1dc" stroke="#d6b477"/><text x="988" y="301" text-anchor="middle" class="label">Relative-edge geometry lift</text>
-  <rect x="852" y="326" width="272" height="39" rx="4" fill="#e3f2ec" stroke="#a6d1c2"/><text x="988" y="350" text-anchor="middle" class="label">Equivariant Q/K/V + attention 1</text>
-  <rect x="852" y="377" width="272" height="39" rx="4" fill="#e3f2ec" stroke="#a6d1c2"/><text x="988" y="401" text-anchor="middle" class="label">Equivariant Q/K/V + attention 2</text>
-  <rect x="852" y="428" width="272" height="39" rx="4" fill="#e3f2ec" stroke="#a6d1c2"/><text x="988" y="452" text-anchor="middle" class="label">Equivariant Q/K/V + attention 3</text>
-  <rect x="852" y="479" width="272" height="39" rx="4" fill="#e3f2ec" stroke="#a6d1c2"/><text x="988" y="503" text-anchor="middle" class="label">Equivariant Q/K/V + attention 4</text>
-  <path d="M988 314 V320 M988 365 V371 M988 416 V422 M988 467 V473" fill="none" stroke="#007f70" stroke-width="2" marker-end="url(#teal-arrow)"/>
+  <rect x="852" y="278" width="272" height="36" rx="4" fill="#fff1dc" stroke="#d6b477"/><text x="988" y="301" text-anchor="middle" class="label">Shared relative-edge lift</text>
+  <rect x="852" y="326" width="272" height="39" rx="4" fill="#e3f2ec" stroke="#a6d1c2"/><text x="988" y="350" text-anchor="middle" class="label">Linear Q/K/V + attention 1</text>
+  <rect x="852" y="377" width="272" height="39" rx="4" fill="#e3f2ec" stroke="#a6d1c2"/><text x="988" y="401" text-anchor="middle" class="label">Linear Q/K/V + attention 2</text>
+  <rect x="852" y="428" width="272" height="39" rx="4" fill="#e3f2ec" stroke="#a6d1c2"/><text x="988" y="452" text-anchor="middle" class="label">Linear Q/K/V + attention 3</text>
+  <rect x="852" y="479" width="272" height="39" rx="4" fill="#e3f2ec" stroke="#a6d1c2"/><text x="988" y="503" text-anchor="middle" class="label">Linear Q/K/V + attention 4</text>
+  <path d="M988 314 V320 M988 365 V371 M988 416 V422 M988 467 V473" fill="none" stroke="#007f70" stroke-width="2"/>
 
-  <path d="M208 513 V581 M598 513 V581 M988 518 V581" fill="none" stroke="#617d82" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M208 513 V581" fill="none" stroke="#617d82" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M598 518 V581" fill="none" stroke="#617d82" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M988 518 V581" fill="none" stroke="#617d82" stroke-width="2" marker-end="url(#arrow)"/>
   <rect x="40" y="586" width="1120" height="58" rx="5" fill="#f0f5f2" stroke="#c7d8d1"/>
   <text x="600" y="610" text-anchor="middle" class="label">SAME TYPED HEADS AND ACTION CONSTRUCTION</text>
   <text x="600" y="629" text-anchor="middle" class="minor">phi: one type-0 score / psi1: one type-0 score / psi2: three type-1 fields; ROI 2 pooling, IMGS, planner held fixed</text>
-  <rect x="40" y="662" width="11" height="11" fill="#fff1dc" stroke="#d6b477"/><text x="60" y="672" class="minor">edge-conditioned geometry</text>
-  <rect x="260" y="662" width="11" height="11" fill="#e3f2ec" stroke="#a6d1c2"/><text x="280" y="672" class="minor">equivariant linear projection + local attention</text>
-  <text x="1158" y="672" text-anchor="end" class="minor">Schematic; no runtime measurements</text>
+  <text x="42" y="671" class="label">WHAT EACH CONTRAST TESTS</text>
+  <path d="M40 680 H1160" stroke="#c7d8d1"/>
+  <text x="60" y="705" class="label" fill="#315d91">B0 &#8594; M1</text>
+  <text x="60" y="725" class="minor">Practical edge-operator replacement</text>
+  <text x="450" y="705" class="label" fill="#a35d16">M1 &#8594; M2</text>
+  <text x="450" y="725" class="minor">Matched edge-schedule ablation</text>
+  <text x="840" y="705" class="label" fill="#007f70">B0 &#8594; M2</text>
+  <text x="840" y="725" class="minor">Final dual-speed and quality claim</text>
+  <path d="M40 742 H1160" stroke="#c7d8d1"/>
+  <rect x="40" y="760" width="11" height="11" fill="#fff1dc" stroke="#d6b477"/><text x="60" y="770" class="minor">edge-conditioned geometry</text>
+  <rect x="260" y="760" width="11" height="11" fill="#e3f2ec" stroke="#a6d1c2"/><text x="280" y="770" class="minor">equivariant linear projection + local attention</text>
+  <text x="1158" y="770" text-anchor="end" class="minor">Schematic; no runtime measurements</text>
 </svg>

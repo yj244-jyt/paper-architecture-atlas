@@ -6,13 +6,13 @@
   <meta name="description" content="An interactive research report comparing the RiEMann baseline with two proposed equivariant backbones.">
   <title>RiEMann B0 / M1 / M2 | Independent Experiment</title>
   <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=1">
+  <link rel="stylesheet" href="styles.css?v=2">
   <script>window.MathJax = {tex: {inlineMath: [['\\(', '\\)']]}, svg: {fontCache: 'local'}, startup: {typeset: false}};</script>
   <script src="../../papers/riemann/vendor/three.min.js" defer></script>
   <script src="../../shared/riemann-scene3d.js?v=experiment-20261009" defer></script>
   <script src="../../papers/riemann/vendor/mathjax-tex-svg.min.js" defer></script>
   <script src="results.js?v=1" defer></script>
-  <script src="app.js?v=1" defer></script>
+  <script src="app.js?v=2" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -20,6 +20,7 @@
       <a class="brand" href="../../">Paper Architecture Atlas</a>
       <nav aria-label="Page navigation">
         <a href="#comparison">Architecture</a>
+        <a href="#ablation">Ablation logic</a>
         <a href="#hypotheses">Hypotheses</a>
         <a href="#report">Report</a>
         <a href="../../papers/riemann/">RiEMann paper view</a>
@@ -32,7 +33,7 @@
       <div class="intro-inner">
         <div class="eyebrow">Independent research notebook / planned experiment</div>
         <h1 id="title">What changes when RiEMann's backbone changes?</h1>
-        <p class="lead">B0 keeps the official SE(3)-Transformer. M1 replaces all three networks with layerwise relative-edge equivariant attention. M2 performs one relative-edge geometry lift, then uses equivariant linear Q/K/V and local invariant attention. The policy around these backbones stays fixed.</p>
+        <p class="lead">B0 keeps the official SE(3)-Transformer. M1 and M2 are a proposed matched pair: both start with the same relative-edge geometry lift; M1 continues to form geometry-conditioned edge K/V in every attention layer, while M2 uses nodewise equivariant linear Q/K/V thereafter. The surrounding RiEMann policy stays fixed.</p>
         <div class="intro-meta"><span>Three backbones</span><span>One shared policy</span><span>Training + inference</span><span>No measured results yet</span></div>
       </div>
     </section>
@@ -75,25 +76,35 @@
       <div class="mode-row"><div class="mode-buttons" role="group" aria-label="Inspect inference or training flow"><button type="button" data-mode="inference" aria-pressed="true">Inference forward</button><button type="button" data-mode="training" aria-pressed="false">Training forward + backward</button></div><span id="flow-phase" aria-live="polite">Forward features to a typed head</span></div>
       <div class="model-grid" id="model-grid"></div>
       <div class="training-flow" id="training-flow" hidden><div><b>Same demonstration supervision</b><span>Target center and orientation axes supervise the same type-0 and type-1 heads.</span></div><div><b>Same losses, reverse gradient flow</b><span>Gradients update each candidate backbone; discrete ROI selection remains a control boundary, not a gradient path.</span></div></div>
-      <p class="diagram-note">Architecture diagrams are schematic. RiEMann Appendix Table 3 reports four layers per network; M1 and M2 are proposed designs, not implementations or measured runs. A highlighted edge operation does not represent a calibrated amount of runtime.</p>
+      <p class="diagram-note">Architecture diagrams are schematic. RiEMann Appendix Table 3 reports four attention layers per network. M1 and M2 share a proposed initial lift plus four matched attention layers; neither RiEMann adapter has been implemented or measured. The current e2tsp-escnn ConvE3 projection is nodewise on centered coordinates, not this proposed relative-edge lift. A highlighted operation is not a calibrated amount of runtime.</p>
       <div class="static-link"><a href="architecture.svg">Open the static SVG comparison</a><a href="architecture.png">Download PNG</a></div>
     </section>
 
+    <section class="ablation-band" id="ablation" aria-labelledby="ablation-title"><div class="content">
+      <div class="section-heading"><div><div class="eyebrow">03 / Experimental purpose</div><h2 id="ablation-title">Which comparison answers which question?</h2></div><p>M1 is a mechanism-control candidate, not the claimed faster final architecture. These contrasts have different levels of causal precision.</p></div>
+      <div class="ablation-head" aria-hidden="true"><span>Contrast</span><span>Question and evidence</span><span>Interpretation boundary</span></div>
+      <div class="ablation-row"><strong>B0 &rarr; M1</strong><p>Can our edge-conditioned operator family replace RiEMann's per-layer SE(3) K/V path while retaining equivariance, pose quality, and task success? Measure its runtime too, without predicting a speed ordering.</p><p>An end-to-end backbone replacement, not an operator-only causal test: the new initial lift and other implementation details may differ from B0.</p></div>
+      <div class="ablation-row primary-contrast"><strong>M1 &rarr; M2</strong><p>After the <em>same</em> initial lift, are geometry-conditioned edge K/V needed again at every layer? Compare step time, inference latency, equivariance, and quality at matched convergence.</p><p>Attribute a difference to the edge-conditioning schedule only if the lift, fibers, graph, depth, attention score, heads, normalization, training, and implementation budget are matched.</p></div>
+      <div class="ablation-row"><strong>B0 &rarr; M2</strong><p>Does the final candidate improve both training-to-quality and complete-policy inference latency against a rerun of the official baseline without unacceptable quality loss?</p><p>This establishes the practical outcome, not which architectural change caused it. Use M1 to interpret the mechanism.</p></div>
+      <p class="ablation-footnote"><strong>Shared M1/M2 test design:</strong> one identical relative-edge lift and typed starting fiber; the same four attention-layer interfaces and all policy components. The planned switch is per-layer edge-conditioned K/V in M1 versus nodewise equivariant linear K/V in M2. Q stays nodewise in both. If this matching cannot be implemented, report M1/M2 as a multi-factor comparison rather than a clean ablation.</p>
+    </div></section>
+
     <section class="hypotheses-band" id="hypotheses" aria-labelledby="hypotheses-title"><div class="content">
-      <div class="section-heading"><div><div class="eyebrow">03 / Mechanism to test</div><h2 id="hypotheses-title">A speed hypothesis, not a speed result</h2></div><p>M2 removes repeated relative-edge steerable lifts from the later layers. That may reduce geometry-dependent work, but kernels, attention, graph construction, memory traffic, and optimization can dominate wall time.</p></div>
+      <div class="section-heading"><div><div class="eyebrow">04 / Mechanism to test</div><h2 id="hypotheses-title">A speed hypothesis, not a speed result</h2></div><p>M2 removes repeated relative-edge steerable K/V computation from the later layers. That may reduce geometry-dependent work, but kernels, attention, graph construction, memory traffic, and optimization can dominate wall time.</p></div>
       <div class="work-pattern" aria-label="Schematic placement of edge-conditioned operations">
         <div class="work-row"><b>B0</b><div class="work-slots"><span class="edge-slot">SE(3) layer</span><span class="edge-slot">SE(3) layer</span><span class="edge-slot">SE(3) layer</span><span class="edge-slot">SE(3) layer</span></div><small>Official four-layer reference</small></div>
-        <div class="work-row"><b>M1</b><div class="work-slots"><span class="edge-slot">Edge message</span><span class="edge-slot">Edge message</span><span class="edge-slot">Edge message</span><span class="edge-slot">Edge message</span></div><small>Proposed edge work every layer</small></div>
-        <div class="work-row"><b>M2</b><div class="work-slots"><span class="edge-slot">Edge lift</span><span class="linear-slot">Q/K/V</span><span class="linear-slot">Q/K/V</span><span class="linear-slot">Q/K/V</span><span class="linear-slot">Q/K/V</span></div><small>Proposed one-time lift, then local attention</small></div>
+        <div class="work-row"><b>M1</b><div class="work-slots"><span class="edge-slot">Shared lift</span><span class="edge-slot">Edge K/V</span><span class="edge-slot">Edge K/V</span><span class="edge-slot">Edge K/V</span><span class="edge-slot">Edge K/V</span></div><small>Same lift; edge K/V every layer</small></div>
+        <div class="work-row"><b>M2</b><div class="work-slots"><span class="edge-slot">Shared lift</span><span class="linear-slot">Linear K/V</span><span class="linear-slot">Linear K/V</span><span class="linear-slot">Linear K/V</span><span class="linear-slot">Linear K/V</span></div><small>Same lift; nodewise K/V thereafter</small></div>
       </div>
       <div class="hypothesis-grid"><div><span class="hypothesis-label">Expected from design</span><h3>Less repeated edge-kernel work in M2</h3><p>M2 should need fewer steerable edge-kernel applications than M1 at the same graph and depth. This is a computational mechanism, not a guaranteed end-to-end speedup.</p></div><div><span class="hypothesis-label">Must be measured</span><h3>Both faster training and inference</h3><p>Compare training step time, time to matched validation quality, and model-only plus full-policy latency on the same GPU. M1 versus B0 has no assumed ordering.</p></div><div><span class="hypothesis-label">Must not be lost</span><h3>Equivariance and task quality</h3><p>Check type-0/type-1 residuals, pose error, and paired closed-loop success. A faster but less effective policy does not validate the original objective.</p></div></div>
     </div></section>
 
     <article class="report content" id="report" aria-labelledby="report-title">
-      <div class="section-heading"><div><div class="eyebrow">04 / Personal experiment report</div><h2 id="report-title">RiEMann B0 / M1 / M2 study</h2></div><span class="status" id="report-status">Planned / no measurements</span></div>
+      <div class="section-heading"><div><div class="eyebrow">05 / Personal experiment report</div><h2 id="report-title">RiEMann B0 / M1 / M2 study</h2></div><span class="status" id="report-status">Planned / no measurements</span></div>
       <div class="report-lead"><p><strong>Research question.</strong> Can our SO(3)-equivariant backbone make the RiEMann manipulation policy faster in both training and inference, without materially reducing pose accuracy or task success?</p><p><strong>Identification strategy.</strong> Reproduce B0, then replace only the three network backbones. All three candidates use the same full-scene XYZ/RGB input, radius graphs, ROI protocol, typed heads, pose construction, losses, data split, and execution stack.</p></div>
       <div class="report-sections">
-        <section><h3>Models and provenance</h3><p><b>B0</b> is the official RiEMann SE(3)-Transformer policy. <b>M1</b> is a proposed layerwise relative-edge equivariant Transformer using our SO(3) representation machinery. <b>M2</b> is a proposed one-time relative-edge lift followed by nodewise equivariant Q/K/V and local invariant attention. Our existing <code>ConvE3</code> is nodewise in its current call pattern; M1 requires a genuine edge-message adapter. Neither M1 nor M2 is presented here as already trained.</p></section>
+        <section><h3>Models and provenance</h3><p><b>B0</b> is the official RiEMann SE(3)-Transformer policy. <b>M1</b> and <b>M2</b> are proposed matched adapters sharing an initial relative-edge lift. M1 retains a steerable edge-conditioned K/V message in every attention layer; M2 uses nodewise equivariant linear Q/K/V after the lift. Our existing <code>ConvE3</code> call pattern is nodewise on centered coordinates, so neither the proposed relative-edge lift nor M1's edge-message adapter is an existing module. Neither candidate has been trained here.</p></section>
+        <section><h3>Purpose of M1</h3><p>M1 checks whether our per-layer edge-conditioned replacement can preserve the baseline's equivariance and task quality. More importantly, paired with M2 it tests whether repeated directional edge conditioning earns its extra cost after both start from the same typed features. B0 versus M1 is a practical architecture comparison; M1 versus M2 is a schedule ablation only after their shared components are matched and verified.</p></section>
         <section><h3>Frozen comparison protocol</h3><p>Audit repository commits, data hashes, GPU/software versions, and the paper-versus-code training mismatch before choosing a single executable configuration. Start with official Mug data and a trajectory-level split; then run paired SAPIEN scenes when simulation assets and success rules are available. Use at least three training seeds. Compare 2,500-point public-code preprocessing and a separate, uniformly processed 8,192-point extension. Do not compare a new measurement directly with the paper's A40 timing.</p></section>
         <section><h3>Measurement contract</h3><p>Report forward, backward, optimizer-step, samples/s, peak memory, and wall time to a preregistered validation threshold. At batch 1, report warm-up-and-synchronized p50/p95 times for &phi;, graph/ROI, &psi;<sub>1</sub>, &psi;<sub>2</sub>, pose construction, model-only, and the complete policy. Report translation and rotation errors plus paired T/NI/NP/DO/ALL simulation success with confidence intervals and failure categories.</p></section>
         <section><h3>Decision rule</h3><p>The dual-speed claim requires faster training to matched quality <em>and</em> lower complete-policy inference latency on the same hardware, while pose quality and task success meet thresholds fixed before final testing. A reduction in theoretical edge operations alone is not sufficient. If one metric fails, report the partial outcome rather than averaging it away.</p></section>
