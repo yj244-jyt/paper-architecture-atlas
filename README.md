@@ -12,6 +12,12 @@ An independent collection of interactive, source-grounded research paper archite
 
 Each visualization cites its primary paper. Procedural geometry, feature values, and trajectories are teaching reconstructions unless an entry explicitly says otherwise.
 
+## Independent experiments
+
+- [RiEMann backbone comparison](experiments/riemann-backbone-comparison/): an animated, English-language research report for the planned B0/M1/M2 controlled study. It is separate from the published-paper library. Expected speedups are hypotheses, not measured results.
+
+The RiEMann paper explainer and backbone experiment use one shared procedural 3D scene implementation at `shared/riemann-scene3d.js`; the table and robot are not redrawn for the experiment. The scene still uses the RiEMann page's bundled Three.js r128 (MIT).
+
 ## Add a paper
 
 1. Create a self-contained directory at papers/<paper-slug>/ with an index.html entry point. Use relative links so the page works under the GitHub Pages project path.

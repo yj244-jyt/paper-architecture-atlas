@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="An interactive research report comparing the RiEMann baseline with two proposed equivariant backbones.">
+  <title>RiEMann B0 / M1 / M2 | Independent Experiment</title>
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css?v=1">
+  <script>window.MathJax = {tex: {inlineMath: [['\\(', '\\)']]}, svg: {fontCache: 'local'}, startup: {typeset: false}};</script>
+  <script src="../../papers/riemann/vendor/three.min.js" defer></script>
+  <script src="../../shared/riemann-scene3d.js?v=experiment-20261009" defer></script>
+  <script src="../../papers/riemann/vendor/mathjax-tex-svg.min.js" defer></script>
+  <script src="results.js?v=1" defer></script>
+  <script src="app.js?v=1" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="../../">Paper Architecture Atlas</a>
+      <nav aria-label="Page navigation">
+        <a href="#comparison">Architecture</a>
+        <a href="#hypotheses">Hypotheses</a>
+        <a href="#report">Report</a>
+        <a href="../../papers/riemann/">RiEMann paper view</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="title">
+      <div class="intro-inner">
+        <div class="eyebrow">Independent research notebook / planned experiment</div>
+        <h1 id="title">What changes when RiEMann's backbone changes?</h1>
+        <p class="lead">B0 keeps the official SE(3)-Transformer. M1 replaces all three networks with layerwise relative-edge equivariant attention. M2 performs one relative-edge geometry lift, then uses equivariant linear Q/K/V and local invariant attention. The policy around these backbones stays fixed.</p>
+        <div class="intro-meta"><span>Three backbones</span><span>One shared policy</span><span>Training + inference</span><span>No measured results yet</span></div>
+      </div>
+    </section>
+
+    <section class="comparison content" id="comparison" aria-labelledby="comparison-title">
+      <div class="section-heading"><div><div class="eyebrow">01 / Controlled comparison</div><h2 id="comparison-title">One action pipeline, three interchangeable backbones</h2></div><p>Choose a stage, then play or scrub. The point cloud and feature values are illustrative teaching geometry, not predictions from trained models.</p></div>
+      <div class="pipeline" aria-label="Shared RiEMann policy pipeline">
+        <div class="pipe-segment" data-pipe="input"><span class="pipe-index">01</span><strong>Scene</strong><small>XYZ + RGB</small></div>
+        <div class="pipe-arrow" aria-hidden="true">&rarr;</div>
+        <div class="pipe-segment replace" data-pipe="phi"><span class="pipe-index">02</span><strong>Saliency &phi;</strong><small>type-0 / full scene</small></div>
+        <div class="pipe-arrow" aria-hidden="true">&rarr;</div>
+        <div class="pipe-segment" data-pipe="roi1"><span class="pipe-index">03</span><strong>ROI 1</strong><small>local crop</small></div>
+        <div class="pipe-arrow" aria-hidden="true">&rarr;</div>
+        <div class="pipe-segment replace" data-pipe="psi1"><span class="pipe-index">04</span><strong>Position &psi;<sub>1</sub></strong><small>type-0 / weighted XYZ</small></div>
+        <div class="pipe-arrow" aria-hidden="true">&rarr;</div>
+        <div class="pipe-segment replace" data-pipe="psi2"><span class="pipe-index">05</span><strong>Orientation &psi;<sub>2</sub></strong><small>3 x type-1 / ROI 2 pool</small></div>
+        <div class="pipe-arrow" aria-hidden="true">&rarr;</div>
+        <div class="pipe-segment" data-pipe="pose"><span class="pipe-index">06</span><strong>Pose + execution</strong><small>IMGS / same planner</small></div>
+      </div>
+      <div class="pipeline-legend"><span><i class="legend-key replaced"></i>Backbone replaced</span><span><i class="legend-key fixed"></i>Held fixed</span></div>
+
+      <div class="lab-toolbar">
+        <div class="stage-buttons" role="group" aria-label="Inspect policy stage">
+          <button type="button" data-stage="input" aria-pressed="false">Input</button>
+          <button type="button" data-stage="phi" aria-pressed="true">&phi;</button>
+          <button type="button" data-stage="roi1" aria-pressed="false">ROI 1</button>
+          <button type="button" data-stage="psi1" aria-pressed="false">&psi;<sub>1</sub></button>
+          <button type="button" data-stage="psi2" aria-pressed="false">&psi;<sub>2</sub></button>
+          <button type="button" data-stage="pose" aria-pressed="false">Pose</button>
+        </div>
+        <div class="playback"><button type="button" id="play" aria-label="Play animation">Pause</button><button type="button" id="restart" aria-label="Restart animation">Restart</button><label for="scrub">Progress</label><input id="scrub" type="range" min="0" max="100" value="30"><output id="progress-value" for="scrub">30%</output><label for="speed">Speed</label><select id="speed" aria-label="Playback speed"><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="1.5">1.5x</option></select><label class="loop-label" for="loop"><input id="loop" type="checkbox" checked>Loop</label></div>
+      </div>
+      <div class="scene-grid">
+        <div class="scene-wrap"><div class="scene-top"><strong id="scene-title">Saliency on the full scene</strong><span>Synthetic teaching example</span></div><svg id="scene" viewBox="0 0 1000 350" role="img" aria-label="Animated point cloud showing the selected RiEMann policy stage"><title>Illustrative policy representation</title><desc>Synthetic scene points change emphasis as saliency, region selection, translation, orientation, and final pose are inspected.</desc></svg><div class="scene-bottom"><span><i class="dot target"></i>Target mug region</span><span><i class="dot background"></i>Other scene points</span><span><i class="dot chosen"></i>Selected or weighted points</span></div></div>
+        <aside class="stage-detail" aria-live="polite"><div class="eyebrow">Shared operation</div><h3 id="stage-title">Saliency network &phi;</h3><p id="stage-description"></p><div class="stage-formula" id="stage-formula" aria-label="Current stage equation"></div><div class="typed-output"><span>Backbone output</span><strong id="stage-output"></strong></div><p class="stage-boundary" id="stage-boundary"></p></aside>
+      </div>
+      <div class="robot-context"><div class="robot-heading"><div><div class="eyebrow">Shared scene geometry</div><h3>The same RiEMann robot and table</h3><p>Reused directly from the Atlas RiEMann 3D teaching scene. The robot, table, mug, rack, and cameras below are illustrative geometry, not simulator observations or learned predictions.</p></div><div class="task-buttons" role="group" aria-label="Illustrative manipulation task"><button type="button" data-task="mug" aria-pressed="true">Mug on rack</button><button type="button" data-task="plane" aria-pressed="false">Plane on shelf</button><button type="button" data-task="faucet" aria-pressed="false">Turn faucet</button></div></div><div id="robot-scene" role="img" aria-label="Reusable three-dimensional RiEMann robot and table scene"></div><p class="robot-hint">Drag to orbit; scroll to zoom. Selecting a policy stage updates the illustrative 3D scene.</p><p id="robot-error" role="alert" hidden>3D rendering is unavailable in this browser. The architecture and 2D policy animation above remain available.</p></div>
+
+      <div class="section-heading backbone-heading"><div><div class="eyebrow">02 / Backbone microscope</div><h2>What each candidate computes</h2></div><p>The same &phi;, &psi;<sub>1</sub>, and &psi;<sub>2</sub> interfaces are used in every column. Only the computation inside each backbone changes.</p></div>
+      <div class="mode-row"><div class="mode-buttons" role="group" aria-label="Inspect inference or training flow"><button type="button" data-mode="inference" aria-pressed="true">Inference forward</button><button type="button" data-mode="training" aria-pressed="false">Training forward + backward</button></div><span id="flow-phase" aria-live="polite">Forward features to a typed head</span></div>
+      <div class="model-grid" id="model-grid"></div>
+      <div class="training-flow" id="training-flow" hidden><div><b>Same demonstration supervision</b><span>Target center and orientation axes supervise the same type-0 and type-1 heads.</span></div><div><b>Same losses, reverse gradient flow</b><span>Gradients update each candidate backbone; discrete ROI selection remains a control boundary, not a gradient path.</span></div></div>
+      <p class="diagram-note">Architecture diagrams are schematic. RiEMann Appendix Table 3 reports four layers per network; M1 and M2 are proposed designs, not implementations or measured runs. A highlighted edge operation does not represent a calibrated amount of runtime.</p>
+      <div class="static-link"><a href="architecture.svg">Open the static SVG comparison</a><a href="architecture.png">Download PNG</a></div>
+    </section>
+
+    <section class="hypotheses-band" id="hypotheses" aria-labelledby="hypotheses-title"><div class="content">
+      <div class="section-heading"><div><div class="eyebrow">03 / Mechanism to test</div><h2 id="hypotheses-title">A speed hypothesis, not a speed result</h2></div><p>M2 removes repeated relative-edge steerable lifts from the later layers. That may reduce geometry-dependent work, but kernels, attention, graph construction, memory traffic, and optimization can dominate wall time.</p></div>
+      <div class="work-pattern" aria-label="Schematic placement of edge-conditioned operations">
+        <div class="work-row"><b>B0</b><div class="work-slots"><span class="edge-slot">SE(3) layer</span><span class="edge-slot">SE(3) layer</span><span class="edge-slot">SE(3) layer</span><span class="edge-slot">SE(3) layer</span></div><small>Official four-layer reference</small></div>
+        <div class="work-row"><b>M1</b><div class="work-slots"><span class="edge-slot">Edge message</span><span class="edge-slot">Edge message</span><span class="edge-slot">Edge message</span><span class="edge-slot">Edge message</span></div><small>Proposed edge work every layer</small></div>
+        <div class="work-row"><b>M2</b><div class="work-slots"><span class="edge-slot">Edge lift</span><span class="linear-slot">Q/K/V</span><span class="linear-slot">Q/K/V</span><span class="linear-slot">Q/K/V</span><span class="linear-slot">Q/K/V</span></div><small>Proposed one-time lift, then local attention</small></div>
+      </div>
+      <div class="hypothesis-grid"><div><span class="hypothesis-label">Expected from design</span><h3>Less repeated edge-kernel work in M2</h3><p>M2 should need fewer steerable edge-kernel applications than M1 at the same graph and depth. This is a computational mechanism, not a guaranteed end-to-end speedup.</p></div><div><span class="hypothesis-label">Must be measured</span><h3>Both faster training and inference</h3><p>Compare training step time, time to matched validation quality, and model-only plus full-policy latency on the same GPU. M1 versus B0 has no assumed ordering.</p></div><div><span class="hypothesis-label">Must not be lost</span><h3>Equivariance and task quality</h3><p>Check type-0/type-1 residuals, pose error, and paired closed-loop success. A faster but less effective policy does not validate the original objective.</p></div></div>
+    </div></section>
+
+    <article class="report content" id="report" aria-labelledby="report-title">
+      <div class="section-heading"><div><div class="eyebrow">04 / Personal experiment report</div><h2 id="report-title">RiEMann B0 / M1 / M2 study</h2></div><span class="status" id="report-status">Planned / no measurements</span></div>
+      <div class="report-lead"><p><strong>Research question.</strong> Can our SO(3)-equivariant backbone make the RiEMann manipulation policy faster in both training and inference, without materially reducing pose accuracy or task success?</p><p><strong>Identification strategy.</strong> Reproduce B0, then replace only the three network backbones. All three candidates use the same full-scene XYZ/RGB input, radius graphs, ROI protocol, typed heads, pose construction, losses, data split, and execution stack.</p></div>
+      <div class="report-sections">
+        <section><h3>Models and provenance</h3><p><b>B0</b> is the official RiEMann SE(3)-Transformer policy. <b>M1</b> is a proposed layerwise relative-edge equivariant Transformer using our SO(3) representation machinery. <b>M2</b> is a proposed one-time relative-edge lift followed by nodewise equivariant Q/K/V and local invariant attention. Our existing <code>ConvE3</code> is nodewise in its current call pattern; M1 requires a genuine edge-message adapter. Neither M1 nor M2 is presented here as already trained.</p></section>
+        <section><h3>Frozen comparison protocol</h3><p>Audit repository commits, data hashes, GPU/software versions, and the paper-versus-code training mismatch before choosing a single executable configuration. Start with official Mug data and a trajectory-level split; then run paired SAPIEN scenes when simulation assets and success rules are available. Use at least three training seeds. Compare 2,500-point public-code preprocessing and a separate, uniformly processed 8,192-point extension. Do not compare a new measurement directly with the paper's A40 timing.</p></section>
+        <section><h3>Measurement contract</h3><p>Report forward, backward, optimizer-step, samples/s, peak memory, and wall time to a preregistered validation threshold. At batch 1, report warm-up-and-synchronized p50/p95 times for &phi;, graph/ROI, &psi;<sub>1</sub>, &psi;<sub>2</sub>, pose construction, model-only, and the complete policy. Report translation and rotation errors plus paired T/NI/NP/DO/ALL simulation success with confidence intervals and failure categories.</p></section>
+        <section><h3>Decision rule</h3><p>The dual-speed claim requires faster training to matched quality <em>and</em> lower complete-policy inference latency on the same hardware, while pose quality and task success meet thresholds fixed before final testing. A reduction in theoretical edge operations alone is not sufficient. If one metric fails, report the partial outcome rather than averaging it away.</p></section>
+      </div>
+      <div class="results-head"><div><h3>Results ledger</h3><p>Unmeasured cells are explicitly marked. The table is driven by <a href="results.js">results.js</a> so future measured values can be published without altering the architecture explanation.</p></div><span class="pending-mark">Awaiting server runs</span></div>
+      <div class="table-scroll"><table class="results-table"><thead><tr><th scope="col">Metric</th><th scope="col">B0</th><th scope="col">M1</th><th scope="col">M2</th><th scope="col">Interpretation</th></tr></thead><tbody id="results-body"></tbody></table></div>
+      <div class="report-footer"><p><strong>Evidence boundary.</strong> The animation is a teaching reconstruction, not a benchmark or simulated rollout. This report currently states a design and measurement plan only.</p><div class="source-links"><a href="https://arxiv.org/abs/2403.19460" target="_blank" rel="noopener noreferrer">RiEMann paper</a><a href="https://github.com/HeegerGao/RiEMann" target="_blank" rel="noopener noreferrer">Official baseline code</a><a href="../../papers/riemann/">Atlas paper explainer</a><a href="REPORT.md">Report source</a></div></div>
+    </article>
+  </main>
+  <footer><div class="footer-inner"><span>Independent research proposal, not a RiEMann authors' result.</span><a href="../../">Back to Paper Architecture Atlas</a></div></footer>
+</body>
+</html>

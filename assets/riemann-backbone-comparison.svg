@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" width="900" height="500" role="img" aria-label="Three parallel point-cloud architecture paths">
+  <rect width="900" height="500" fill="#e7f0ec"/>
+  <path d="M0 373H900" stroke="#bad1c8" stroke-width="2"/>
+  <rect x="35" y="38" width="255" height="420" rx="7" fill="#f8fbfa" stroke="#c4d8d1"/>
+  <rect x="322" y="38" width="255" height="420" rx="7" fill="#f8fbfa" stroke="#c4d8d1"/>
+  <rect x="609" y="38" width="255" height="420" rx="7" fill="#f8fbfa" stroke="#c4d8d1"/>
+  <g fill="#319987" opacity=".8"><circle cx="111" cy="103" r="5"/><circle cx="137" cy="89" r="4"/><circle cx="150" cy="108" r="5"/><circle cx="173" cy="85" r="3"/><circle cx="188" cy="111" r="4"/><circle cx="130" cy="124" r="3"/><circle cx="166" cy="129" r="5"/><circle cx="207" cy="93" r="3"/><circle cx="402" cy="103" r="5"/><circle cx="428" cy="89" r="4"/><circle cx="441" cy="108" r="5"/><circle cx="464" cy="85" r="3"/><circle cx="479" cy="111" r="4"/><circle cx="421" cy="124" r="3"/><circle cx="457" cy="129" r="5"/><circle cx="498" cy="93" r="3"/><circle cx="689" cy="103" r="5"/><circle cx="715" cy="89" r="4"/><circle cx="728" cy="108" r="5"/><circle cx="751" cy="85" r="3"/><circle cx="766" cy="111" r="4"/><circle cx="708" cy="124" r="3"/><circle cx="744" cy="129" r="5"/><circle cx="785" cy="93" r="3"/></g>
+  <path d="M162 145V168 M449 145V168 M736 145V168" stroke="#7c9d95" stroke-width="3"/>
+  <g fill="#dbe8f6" stroke="#315d91" stroke-width="2"><rect x="93" y="170" width="138" height="36" rx="4"/><rect x="93" y="226" width="138" height="36" rx="4"/><rect x="93" y="282" width="138" height="36" rx="4"/><rect x="93" y="338" width="138" height="36" rx="4"/></g>
+  <g fill="#fff0d6" stroke="#a35d16" stroke-width="2"><rect x="380" y="170" width="138" height="36" rx="4"/><rect x="380" y="226" width="138" height="36" rx="4"/><rect x="380" y="282" width="138" height="36" rx="4"/><rect x="380" y="338" width="138" height="36" rx="4"/><rect x="667" y="168" width="138" height="36" rx="4"/></g>
+  <g fill="#dff0e8" stroke="#007f70" stroke-width="2"><rect x="667" y="220" width="138" height="30" rx="4"/><rect x="667" y="261" width="138" height="30" rx="4"/><rect x="667" y="302" width="138" height="30" rx="4"/><rect x="667" y="343" width="138" height="30" rx="4"/></g>
+  <g stroke-width="3" fill="none"><path d="M162 206v18 M162 262v18 M162 318v18" stroke="#315d91"/><path d="M449 206v18 M449 262v18 M449 318v18" stroke="#a35d16"/><path d="M736 204v14 M736 250v9 M736 291v9 M736 332v9" stroke="#007f70"/></g>
+  <g fill="#315d91"><circle cx="162" cy="216" r="5"/><circle cx="162" cy="272" r="5"/><circle cx="162" cy="328" r="5"/></g><g fill="#a35d16"><circle cx="449" cy="216" r="5"/><circle cx="449" cy="272" r="5"/><circle cx="449" cy="328" r="5"/></g><g fill="#007f70"><circle cx="736" cy="211" r="5"/><circle cx="736" cy="255" r="5"/><circle cx="736" cy="296" r="5"/><circle cx="736" cy="337" r="5"/></g>
+  <path d="M162 374V415 M449 374V415 M736 373V415" stroke="#7c9d95" stroke-width="3"/>
+  <g fill="none" stroke="#6e9387" stroke-width="2"><circle cx="162" cy="432" r="12"/><circle cx="449" cy="432" r="12"/><circle cx="736" cy="432" r="12"/></g>
+</svg>

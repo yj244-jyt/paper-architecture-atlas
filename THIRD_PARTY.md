@@ -1,7 +1,7 @@
 # Third-party notices
 
-- **Three.js r128**: [project](https://github.com/mrdoob/three.js), [MIT license](licenses/THREE-MIT.txt). Bundled at papers/riemann/vendor/three.min.js and papers/dp3/vendor/three.min.js.
-- **MathJax 3.2.2**: [project](https://github.com/mathjax/MathJax), [Apache License 2.0](licenses/MATHJAX-APACHE-2.0.txt). Bundled at papers/riemann/vendor/mathjax-tex-svg.min.js and papers/dp3/vendor/mathjax-tex-svg.min.js.
+- **Three.js r128**: [project](https://github.com/mrdoob/three.js), [MIT license](licenses/THREE-MIT.txt). Bundled at papers/riemann/vendor/three.min.js and papers/dp3/vendor/three.min.js. The RiEMann bundle is also used by the independent backbone experiment's shared 3D scene.
+- **MathJax 3.2.2**: [project](https://github.com/mathjax/MathJax), [Apache License 2.0](licenses/MATHJAX-APACHE-2.0.txt). Bundled at papers/riemann/vendor/mathjax-tex-svg.min.js and papers/dp3/vendor/mathjax-tex-svg.min.js. The RiEMann bundle also typesets the backbone experiment's equations.
 - **Terry Cloth diffuse texture**: [Poly Haven](https://polyhaven.com/a/terry_cloth), CC0 1.0. A resized, brightened 512px derivative is bundled at papers/fast-wam/terry-cloth.jpg.
 - **Robot arm icon**: [Danilo.mac / Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Robot_arm_icon.svg), CC0 1.0. Bundled at papers/fast-wam/robot-arm-icon.svg.
 - **Drill 01 3D model and textures**: [Fernando Quinn / Poly Haven](https://polyhaven.com/a/Drill_01), CC0 1.0. The DP3 catalog cover at assets/dp3-scene.png is an original offline render of the downloadable glTF asset; the website's example renders are not used.

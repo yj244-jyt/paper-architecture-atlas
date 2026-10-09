@@ -1,4 +1,4 @@
-/* A paper-grounded, procedural scene reconstruction. Point values are illustrative. */
+/* Shared paper-grounded scene reconstruction. Point values are illustrative. */
 window.Riemann3D = function Riemann3D(container, options) {
   const T = window.THREE;
   const scene = new T.Scene();
