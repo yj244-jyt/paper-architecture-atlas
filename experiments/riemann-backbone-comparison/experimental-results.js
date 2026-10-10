@@ -5,6 +5,13 @@
   const CONDITION_COLORS = { T: "#315d91", NI: "#5a877e", NP: "#d38a25", DO: "#b84d43", ALL: "#6f5a8e" };
   const conditions = ["T", "NI", "NP", "DO", "ALL"];
   const models = ["B0", "M1", "M2"];
+  const conditionMeta = {
+    T: { name: "Training distribution", change: "Familiar object instance, pose, and surroundings" },
+    NI: { name: "New instance", change: "Object instance changes; pose stays familiar" },
+    NP: { name: "New pose", change: "Target pose and position change" },
+    DO: { name: "Distracting objects", change: "Distractors are added around the target" },
+    ALL: { name: "All factors", change: "New instance + new pose + distractors" }
+  };
   const summary = [
     ["T", { B0: [60, 60, .9398, 1], M1: [59, 60, .9114, .9971], M2: [56, 60, .8407, .9738] }],
     ["NI", { B0: [60, 60, .9398, 1], M1: [60, 60, .9398, 1], M2: [60, 60, .9398, 1] }],
@@ -109,6 +116,14 @@
     add("text", {x:margin.left,y:15,fill:"#546a6f","font-size":"11"}, "Success rate"); host.replaceChildren(svg);
   }
 
+  function renderTasks() {
+    table(
+      $("#condition-table"),
+      ["Code", "Task name", "Controlled change", "Paired episodes"],
+      conditions.map(condition => [condition, conditionMeta[condition].name, conditionMeta[condition].change, "60 per model"])
+    );
+  }
+
   function renderTables() {
     table($("#quality-table"), ["Model","Params","Translation cm","Rotation deg","Model p50 ms","E2E p50 ms","Peak MiB"], quality.map(row => [row.model,row.params,row.translation,row.rotation,row.modelMs,row.e2eMs,row.memory]));
     table($("#training-table"), ["Model","Phi h","Mani h","Total h","sec / epoch (Phi / Mani)"], training.map(row => [row.model,row.phi,row.mani,row.total,row.epoch]));
@@ -131,29 +146,71 @@
   }
 
   function renderViewer() {
-    const canvas=$("#simulation-canvas"), modelSelect=$("#sim-model"), conditionSelect=$("#sim-condition"), outcomeSelect=$("#sim-outcome"), gallery=$("#case-gallery");
-    models.forEach(model=>modelSelect.append(make("option",{value:model},model))); conditions.forEach(condition=>conditionSelect.append(make("option",{value:condition},condition)));
-    let selected=0, filtered=[];
-    const renderer = window.THREE ? new THREE.WebGLRenderer({canvas, antialias:true, alpha:true}) : null;
-    if(!renderer){ $("#sim-description").textContent="Three.js is unavailable in this browser."; return; }
-    const scene=new THREE.Scene(); scene.background=new THREE.Color(0xeaf0ec); const camera=new THREE.PerspectiveCamera(36,1,.1,100); camera.position.set(3.05,2.45,3.25); const world=new THREE.Group();scene.add(world);
-    scene.add(new THREE.HemisphereLight(0xffffff,0x8fa79d,1.2)); const key=new THREE.DirectionalLight(0xffffff,1.2);key.position.set(-2,4,3);scene.add(key);
-    let yaw=.62,pitch=.39,distance=4.6,drag=null;
-    const viewPoint = value => new THREE.Vector3((value[0]-.45)*4.8, value[2]*4.8+.22, value[1]*4.8);
-    const mat=(color,opacity=1)=>new THREE.MeshStandardMaterial({color,roughness:.62,metalness:.05,transparent:opacity<1,opacity,depthWrite:opacity===1});
-    const cylinderBetween=(a,b,r,material)=>{const d=b.clone().sub(a),mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),14),material);mesh.position.copy(a).add(b).multiplyScalar(.5);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());world.add(mesh);return mesh;};
-    const addBox=(size,pos,material)=>{const mesh=new THREE.Mesh(new THREE.BoxGeometry(...size),material);mesh.position.copy(pos);world.add(mesh);return mesh;};
-    function drawArm(grasp){ const base=new THREE.Vector3(-1.55,.28,-.9), shoulder=new THREE.Vector3(-1.35,1.1,-.72), elbow=new THREE.Vector3(-.78,1.48,-.42), wrist=grasp.clone().add(new THREE.Vector3(-.08,.18,-.05)); cylinderBetween(base,shoulder,.12,mat(0x263941)); cylinderBetween(shoulder,elbow,.095,mat(0xd4e2dc)); cylinderBetween(elbow,wrist,.07,mat(0xb7cbc2)); cylinderBetween(wrist,grasp,.045,mat(0x263941)); addBox([.2,.08,.16],grasp,mat(0x263941)); addBox([.035,.18,.04],grasp.clone().add(new THREE.Vector3(-.07,-.1,.02)),mat(0xceddd6)); addBox([.035,.18,.04],grasp.clone().add(new THREE.Vector3(.07,-.1,.02)),mat(0xceddd6)); }
-    function drawMug(position, material, ghost=false){ const group=new THREE.Group();group.position.copy(position);world.add(group);const body=new THREE.Mesh(new THREE.CylinderGeometry(.18,.17,.36,28),material);body.position.y=.18;group.add(body);const rim=new THREE.Mesh(new THREE.TorusGeometry(.17,.025,10,28),material);rim.rotation.x=Math.PI/2;rim.position.y=.37;group.add(rim);const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(.14,.31,0),new THREE.Vector3(.26,.32,0),new THREE.Vector3(.31,.2,0),new THREE.Vector3(.23,.06,0),new THREE.Vector3(.14,.07,0)]);group.add(new THREE.Mesh(new THREE.TubeGeometry(curve,24,.027,10,false),material)); if(ghost)group.children.forEach(child=>{child.material=mat(0x1b987d,.28)});return group; }
-    function rebuild(){ while(world.children.length)world.remove(world.children[0]); addBox([3.4,.08,2.8],new THREE.Vector3(0,.12,0),mat(0xcddbd5)); addBox([.85,.04,.76],new THREE.Vector3(.72,.28,-.18),mat(0x456b70)); addBox([.08,.95,.08],new THREE.Vector3(.72,.76,-.18),mat(0x456b70)); const item=filtered[selected]; if(!item)return; const target=viewPoint(item.t), prediction=viewPoint(item.g), predPosition=viewPoint(item.p); drawMug(target,mat(item.ok?0x438b80:0xb84d43)); if(item.ok)drawMug(target.clone().add(new THREE.Vector3(0,1.05,0)),mat(0x16877c,.23),true); addBox([.06,.06,.06],predPosition,mat(0xe39a35)); addBox([.04,.04,.04],target.clone().add(new THREE.Vector3(0,.38,0)),mat(0xb84d43)); cylinderBetween(prediction,predPosition,.018,mat(0xd38a25)); cylinderBetween(predPosition,target,.012,mat(item.ok?0x16877c:0xb84d43,.82)); if(!item.ok){cylinderBetween(target.clone().add(new THREE.Vector3(-.12,0,0)),target.clone().add(new THREE.Vector3(.12,0,0)),.022,mat(0xb84d43));cylinderBetween(target.clone().add(new THREE.Vector3(0,0,-.12)),target.clone().add(new THREE.Vector3(0,0,.12)),.022,mat(0xb84d43));} drawArm(prediction); for(let i=0;i<(item.c==='DO'||item.c==='ALL'?3:0);i++){const offset=new THREE.Vector3(-.7+i*.6,.27,(i%2?-1:1)*.55);addBox([.32,.24,.3],offset,mat(i===1?0x6f5a8e:0xd97052));} }
-    function resize(){const box=canvas.getBoundingClientRect(),width=Math.max(1,box.width),height=Math.max(1,box.height);renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();}
-    function animate(){requestAnimationFrame(animate);const target=new THREE.Vector3(0,.72,0);camera.position.set(Math.cos(yaw)*Math.cos(pitch)*distance,Math.sin(pitch)*distance+.45,Math.sin(yaw)*Math.cos(pitch)*distance);camera.lookAt(target);renderer.render(scene,camera);}
-    function filteredCases(){filtered=cases.filter(item=>item.m===modelSelect.value&&item.c===conditionSelect.value&&(outcomeSelect.value==='all'||(outcomeSelect.value==='success'?item.ok:!item.ok)));selected=Math.min(selected,Math.max(0,filtered.length-1));renderCase();}
-    function renderGallery(){gallery.replaceChildren();filtered.forEach((item,index)=>{const button=make("button",{type:"button",class:`case-card ${item.ok?'success':'failure'} ${index===selected?'active':''}`});button.append(make("strong",{},`${item.m} / ${item.c}`),make("span",{},`seed ${item.s} · scene ${item.n}`),make("small",{},item.ok?"SUCCESS":item.o.replace("_"," ")));button.addEventListener("click",()=>{selected=index;renderCase();});gallery.append(button);});$("#sim-case-count").textContent=`${selected+1} / ${filtered.length} shown · ${cases.length} representatives`;
+    const frame = $("#simulation-frame"), modelSelect = $("#sim-model"), conditionSelect = $("#sim-condition"), outcomeSelect = $("#sim-outcome"), gallery = $("#case-gallery"), playButton = $("#sim-play");
+    models.forEach(model => modelSelect.append(make("option", {value:model}, model)));
+    conditions.forEach(condition => conditionSelect.append(make("option", {value:condition}, `${condition} · ${conditionMeta[condition].name}`)));
+    let selected = 0, filtered = [], timer = null;
+    const framePath = item => `assets/simulation-frames/${item.c.toLowerCase()}-seed${String(item.n).padStart(2, "0")}.png`;
+
+    function stopPlayback() {
+      if (timer) window.clearInterval(timer);
+      timer = null;
+      playButton.textContent = "Play frames";
+      playButton.setAttribute("aria-pressed", "false");
     }
-    function renderCase(){const item=filtered[selected];rebuild();renderGallery();const facts=$("#sim-facts");facts.replaceChildren();if(!item){$("#sim-status").textContent="NO REPRESENTATIVE CASE";$("#sim-status").className="case-status";$("#sim-title").textContent=`${modelSelect.value} / ${conditionSelect.value} · ${outcomeSelect.value}`;$("#sim-description").textContent="No saved representative episode matches this exact filter. Switch the outcome or condition to inspect the available records.";return;}$("#sim-status").textContent=item.ok?"SUCCESS · bilateral contact + lift hold":"FAILURE · "+item.o.replace("_"," ");$("#sim-status").className=`case-status ${item.ok?'success':'failure'}`;$("#sim-title").textContent=`${item.m} / ${item.c} · seed ${item.s}, scene ${item.n}`;$("#sim-description").textContent=item.ok?"The proxy target reaches the lift-and-hold criterion after the predicted grasp.":item.o==='policy_invalid'?"The predicted grasp pose crossed the frozen Panda workspace gate before planning.":"The planned approach reached closure, but bilateral finger contact was not validated.";[["Outcome",item.o],['Target',item.t.map(v=>v.toFixed(3)).join(', ')+' m'],['Predicted position',item.p.map(v=>v.toFixed(3)).join(', ')+' m'],['Grasp point',item.g.map(v=>v.toFixed(3)).join(', ')+' m'],['Held height',item.h?item.h.toFixed(3)+' m':'not reached']].forEach(([key,value])=>{facts.append(make('dt',{},key),make('dd',{},value));});}
-    [modelSelect,conditionSelect,outcomeSelect].forEach(control=>control.addEventListener('change',()=>{selected=0;filteredCases();}));$("#sim-prev").addEventListener('click',()=>{if(!filtered.length)return;selected=(selected-1+filtered.length)%filtered.length;renderCase();});$("#sim-next").addEventListener('click',()=>{if(!filtered.length)return;selected=(selected+1)%filtered.length;renderCase();});canvas.addEventListener('pointerdown',event=>{drag={x:event.clientX,y:event.clientY,yaw,pitch};canvas.setPointerCapture(event.pointerId);});canvas.addEventListener('pointermove',event=>{if(!drag)return;yaw=drag.yaw-(event.clientX-drag.x)*.008;pitch=Math.max(-.1,Math.min(1.15,drag.pitch+(event.clientY-drag.y)*.006));});canvas.addEventListener('pointerup',()=>{drag=null;});canvas.addEventListener('wheel',event=>{event.preventDefault();distance=Math.max(3.2,Math.min(7,distance+event.deltaY*.004));},{passive:false});window.addEventListener('resize',resize);resize();modelSelect.value='M1';conditionSelect.value='NP';filteredCases();animate();
+
+    function renderGallery() {
+      gallery.replaceChildren();
+      filtered.forEach((item, index) => {
+        const button = make("button", {type:"button", class:`case-card ${item.ok ? "success" : "failure"} ${index === selected ? "active" : ""}`});
+        button.append(make("strong", {}, `${item.m} / ${item.c}`), make("span", {}, `${conditionMeta[item.c].name} · seed ${item.s} · scene ${item.n}`), make("small", {}, item.ok ? "SUCCESS" : item.o.replace("_", " ")));
+        button.addEventListener("click", () => { selected = index; stopPlayback(); renderCase(); });
+        gallery.append(button);
+      });
+      $("#sim-case-count").textContent = filtered.length ? `${selected + 1} / ${filtered.length} shown · ${cases.length} representatives` : `0 shown · ${cases.length} representatives`;
+    }
+
+    function renderCase() {
+      const item = filtered[selected], facts = $("#sim-facts");
+      facts.replaceChildren();
+      renderGallery();
+      if (!item) {
+        frame.removeAttribute("src"); frame.alt = "No saved representative scene for this filter";
+        $("#frame-source").textContent = "No matching saved scene"; $("#frame-progress").textContent = "";
+        $("#sim-status").textContent = "NO REPRESENTATIVE CASE"; $("#sim-status").className = "case-status";
+        $("#sim-title").textContent = `${modelSelect.value} / ${conditionSelect.value} · ${outcomeSelect.value}`;
+        $("#sim-description").textContent = "No saved representative episode matches this exact filter. Switch the outcome or condition to inspect the available records.";
+        return;
+      }
+      frame.src = framePath(item);
+      frame.alt = `${item.c} ${conditionMeta[item.c].name}, scene seed ${item.n}, ${item.ok ? "successful" : "failed"} ${item.m} episode`;
+      frame.classList.remove("frame-arrive"); void frame.offsetWidth; frame.classList.add("frame-arrive");
+      $("#frame-source").textContent = `${item.c} · ${conditionMeta[item.c].name} · saved 8,192-point observation`;
+      $("#frame-progress").textContent = `scene seed ${item.n}`;
+      $("#sim-status").textContent = item.ok ? "SUCCESS · bilateral contact + lift hold" : `FAILURE · ${item.o.replace("_", " ")}`;
+      $("#sim-status").className = `case-status ${item.ok ? "success" : "failure"}`;
+      $("#sim-title").textContent = `${item.m} / ${item.c} · seed ${item.s}, scene ${item.n}`;
+      $("#sim-description").textContent = item.ok ? "The recorded episode reached bilateral contact and the lift-and-hold criterion." : item.o === "policy_invalid" ? "The predicted grasp pose crossed the frozen Panda workspace gate before planning." : "The planned approach reached closure, but bilateral finger contact was not validated.";
+      [["Task", `${item.c} · ${conditionMeta[item.c].name}`], ["Outcome", item.o], ["Target", `${item.t.map(v => v.toFixed(3)).join(", ")} m`], ["Predicted position", `${item.p.map(v => v.toFixed(3)).join(", ")} m`], ["Grasp point", `${item.g.map(v => v.toFixed(3)).join(", ")} m`], ["Held height", item.h ? `${item.h.toFixed(3)} m` : "not reached"]].forEach(([key, value]) => facts.append(make("dt", {}, key), make("dd", {}, value)));
+    }
+
+    function filteredCases() {
+      filtered = cases.filter(item => item.m === modelSelect.value && item.c === conditionSelect.value && (outcomeSelect.value === "all" || (outcomeSelect.value === "success" ? item.ok : !item.ok)));
+      selected = Math.min(selected, Math.max(0, filtered.length - 1));
+      renderCase();
+    }
+
+    [modelSelect, conditionSelect, outcomeSelect].forEach(control => control.addEventListener("change", () => { selected = 0; stopPlayback(); filteredCases(); }));
+    $("#sim-prev").addEventListener("click", () => { if (!filtered.length) return; selected = (selected - 1 + filtered.length) % filtered.length; stopPlayback(); renderCase(); });
+    $("#sim-next").addEventListener("click", () => { if (!filtered.length) return; selected = (selected + 1) % filtered.length; stopPlayback(); renderCase(); });
+    playButton.addEventListener("click", () => {
+      if (timer) { stopPlayback(); return; }
+      if (filtered.length < 2) return;
+      playButton.textContent = "Pause frames"; playButton.setAttribute("aria-pressed", "true");
+      timer = window.setInterval(() => { selected = (selected + 1) % filtered.length; renderCase(); }, 1800);
+    });
+    modelSelect.value = "M1"; conditionSelect.value = "NP"; filteredCases();
   }
 
-  renderCallouts(); renderSuccessChart(); renderTables(); renderSignificance(); renderReading(); renderViewer();
+  renderCallouts(); renderSuccessChart(); renderTasks(); renderTables(); renderSignificance(); renderReading(); renderViewer();
 })();
