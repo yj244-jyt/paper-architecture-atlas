@@ -6,13 +6,14 @@
   <meta name="description" content="An interactive research report comparing the RiEMann baseline with two proposed equivariant backbones.">
   <title>RiEMann B0 / M1 / M2 | Independent Experiment</title>
   <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=3">
   <script>window.MathJax = {tex: {inlineMath: [['\\(', '\\)']]}, svg: {fontCache: 'local'}, startup: {typeset: false}};</script>
   <script src="../../papers/riemann/vendor/three.min.js" defer></script>
   <script src="../../shared/riemann-scene3d.js?v=experiment-20261009" defer></script>
   <script src="../../papers/riemann/vendor/mathjax-tex-svg.min.js" defer></script>
   <script src="results.js?v=1" defer></script>
   <script src="app.js?v=2" defer></script>
+  <script src="edge-graph.js?v=1" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -74,6 +75,22 @@
 
       <div class="section-heading backbone-heading"><div><div class="eyebrow">02 / Backbone microscope</div><h2>What each candidate computes</h2></div><p>The same &phi;, &psi;<sub>1</sub>, and &psi;<sub>2</sub> interfaces are used in every column. Only the computation inside each backbone changes.</p></div>
       <div class="mode-row"><div class="mode-buttons" role="group" aria-label="Inspect inference or training flow"><button type="button" data-mode="inference" aria-pressed="true">Inference forward</button><button type="button" data-mode="training" aria-pressed="false">Training forward + backward</button></div><span id="flow-phase" aria-live="polite">Forward features to a typed head</span></div>
+      <section class="edge-microscope" aria-labelledby="edge-title">
+        <div class="edge-intro"><div><div class="eyebrow">Point graph microscope</div><h3 id="edge-title">Follow one neighborhood through all three backbones</h3></div><p>Identical points and connections in every column. The symbols show computation, not learned features or measured attention weights.</p></div>
+        <div class="edge-controls">
+          <button type="button" id="edge-prev" class="edge-icon-button" aria-label="Previous computation step" title="Previous step">&larr;</button>
+          <button type="button" id="edge-play" class="edge-icon-button" aria-label="Play point graph animation" title="Play animation">&#9654;</button>
+          <button type="button" id="edge-next" class="edge-icon-button" aria-label="Next computation step" title="Next step">&rarr;</button>
+          <label for="edge-progress">Within step</label><input id="edge-progress" type="range" min="0" max="100" value="0"><output id="edge-progress-value" for="edge-progress">0%</output>
+          <label for="edge-speed">Speed</label><select id="edge-speed" aria-label="Point graph playback speed"><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="1.5">1.5x</option></select>
+          <label class="edge-loop" for="edge-loop"><input id="edge-loop" type="checkbox" checked>Loop</label>
+        </div>
+        <div class="edge-timeline" id="edge-timeline" role="group" aria-label="Computation steps"></div>
+        <div class="edge-step-heading" aria-live="polite"><span id="edge-step-count">01 / 10</span><div><strong id="edge-step-title"></strong><p id="edge-step-description"></p></div></div>
+        <div class="edge-graphs" id="edge-graphs"></div>
+        <div class="edge-legend"><span><i class="edge-legend-dot source"></i>Source point j</span><span><i class="edge-legend-dot receiver"></i>Receiving points i and i'</span><span><i class="edge-legend-line"></i>Radius-graph connection</span><span><i class="edge-legend-dot message"></i>Information moving on an edge</span></div>
+        <p class="edge-disclosure">M1 and M2 are proposed designs, not implemented RiEMann adapters. “Shared lift” means the same lift design in those two candidates, not shared trained weights or a lift shared across &phi;, &psi;<sub>1</sub>, and &psi;<sub>2</sub>. “Linear Q/K/V” means equivariant nodewise projections, not linear-time attention.</p>
+      </section>
       <div class="model-grid" id="model-grid"></div>
       <div class="training-flow" id="training-flow" hidden><div><b>Same demonstration supervision</b><span>Target center and orientation axes supervise the same type-0 and type-1 heads.</span></div><div><b>Same losses, reverse gradient flow</b><span>Gradients update each candidate backbone; discrete ROI selection remains a control boundary, not a gradient path.</span></div></div>
       <p class="diagram-note">Architecture diagrams are schematic. RiEMann Appendix Table 3 reports four attention layers per network. M1 and M2 share a proposed initial lift plus four matched attention layers; neither RiEMann adapter has been implemented or measured. The current e2tsp-escnn ConvE3 projection is nodewise on centered coordinates, not this proposed relative-edge lift. A highlighted operation is not a calibrated amount of runtime.</p>
